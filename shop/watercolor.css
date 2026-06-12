@@ -1,0 +1,93 @@
+/* ─────────────────────────────────────────────────────────────────
+   Toula Designs — Watercolor border treatment (pure CSS)
+   ─────────────────────────────────────────────────────────────────
+   Approach: a plain CSS solid/double border drawn on a ::before, then
+   pushed through an inline SVG feTurbulence + feDisplacementMap filter.
+   The displacement jitters the border pixels into smudgy painted patches
+   that match the Figma watercolor PNG borders — without any raster.
+
+   Three sizes ship: --fine (tight cards), default (section cards),
+   --bold (hero cards). All recolor via `--wc-color`.
+
+   Usage:
+     <div class="tld-wc">…</div>
+     <div class="tld-wc tld-wc--mauve tld-wc--bold">…</div>
+   ───────────────────────────────────────────────────────────────── */
+
+.tld-wc {
+  position: relative;
+  border-radius: 12px;
+}
+
+.tld-wc::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border: 5px solid var(--wc-color, var(--tld-paper));
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 2;
+  filter: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='f' x='-12%25' y='-12%25' width='124%25' height='124%25'><feTurbulence type='fractalNoise' baseFrequency='0.04' numOctaves='3' seed='5'/><feDisplacementMap in='SourceGraphic' scale='8'/></filter></svg>#f");
+}
+
+/* Fine variant — 2 px painted border, modest wobble, for tight UI */
+.tld-wc--fine::before {
+  border-width: 3px;
+  inset: -2px;
+  filter: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='f' x='-8%25' y='-8%25' width='116%25' height='116%25'><feTurbulence type='fractalNoise' baseFrequency='0.06' numOctaves='2' seed='3'/><feDisplacementMap in='SourceGraphic' scale='4'/></filter></svg>#f");
+}
+
+/* Bold variant — chunky band, heavy displacement, for hero sections */
+.tld-wc--bold::before {
+  border-width: 10px;
+  inset: -8px;
+  filter: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='f' x='-15%25' y='-15%25' width='130%25' height='130%25'><feTurbulence type='fractalNoise' baseFrequency='0.025' numOctaves='3' seed='9'/><feDisplacementMap in='SourceGraphic' scale='14'/></filter></svg>#f");
+}
+
+/* Double-border variant — mimics the 4px double paper border used on
+   hover states. Two parallel painted strokes. */
+.tld-wc--double::before {
+  border-style: double;
+  border-width: 10px;
+}
+
+/* Color variants */
+.tld-wc--paper { --wc-color: var(--tld-paper); }
+.tld-wc--ink   { --wc-color: var(--tld-ink); }
+.tld-wc--mauve { --wc-color: var(--tld-mauve); }
+.tld-wc--blue  { --wc-color: var(--tld-blue); }
+.tld-wc--black { --wc-color: #000; }
+
+/* ─────────────────────────────────────────────────────────────────
+   Watercolor BUTTON shadow — the painted strip that sits under the
+   "Read More" / "View Design" buttons in the original Figma. A wider,
+   blurred painted bar that bleeds out beyond the button's left+right.
+   ───────────────────────────────────────────────────────────────── */
+.tld-wc-btn {
+  position: relative;
+  isolation: isolate;
+  display: inline-flex;
+}
+.tld-wc-btn::after {
+  content: "";
+  position: absolute;
+  left: -10px; right: -10px;
+  bottom: -6px;
+  height: 20px;
+  background-color: var(--wc-color, var(--tld-paper));
+  opacity: 0.55;
+  border-radius: 6px;
+  z-index: -1;
+  filter: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='f' x='-10%25' y='-30%25' width='120%25' height='160%25'><feTurbulence type='fractalNoise' baseFrequency='0.08 0.15' numOctaves='2' seed='1'/><feDisplacementMap in='SourceGraphic' scale='10'/></filter></svg>#f");
+}
+
+/* ─────────────────────────────────────────────────────────────────
+   Watercolor horizontal rule — painted strip used between section
+   subheads in the project modal + skills.
+   ───────────────────────────────────────────────────────────────── */
+.tld-wc-rule {
+  height: 8px;
+  background-color: var(--wc-color, var(--tld-paper));
+  border-radius: 4px;
+  filter: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg'><filter id='f' x='-3%25' y='-40%25' width='106%25' height='180%25'><feTurbulence type='fractalNoise' baseFrequency='0.1 0.4' numOctaves='2' seed='4'/><feDisplacementMap in='SourceGraphic' scale='6'/></filter></svg>#f");
+}

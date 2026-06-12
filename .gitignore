@@ -1,0 +1,9 @@
+# Secret keys — NEVER upload these
+.env
+
+# Node modules — too big to upload
+node_modules/
+
+# System files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,178 @@
+/* ─────────────────────────────────────────────────────────────────
+   Toula Designs — Colors & Typography Tokens
+   Source: tae9467.github.io live styles.css + Figma file
+   ───────────────────────────────────────────────────────────────── */
+
+/* Fonts (Google Fonts CDN — all webfonts the brand actually uses) */
+@import url('https://fonts.googleapis.com/css2?family=Metal&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poltawski+Nowy:ital,wght@0,400..700;1,400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Sans:ital,wght@0,400..700;1,400..700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Neuton:wght@200;300;400;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
+
+:root {
+  /* ─────────── CORE — Toula's personal portfolio palette ─────────── */
+  /* Backgrounds */
+  --tld-ink:        hsl(222, 10%, 12%);   /* #1C1D22 — primary dark canvas, header, cards */
+  --tld-paper:      hsl(240, 7%, 84%);    /* #D3D3D9 — body bg, paper-light text on ink */
+  --tld-white:      #FFFFFF;
+  --tld-paper-soft: hsl(0, 0%, 99%);      /* #FCFCFC — slightly off white */
+
+  /* Brand accents — pink → blue gradient duo */
+  --tld-mauve:      hsl(330, 45%, 65%);   /* #C67EA6 — primary rose/mauve accent */
+  --tld-mauve-deep: hsl(330, 45%, 55%);   /* deeper hover */
+  --tld-blue:       hsl(216, 47%, 70%);   /* #8FABD6 — secondary cornflower blue */
+  --tld-blue-deep:  hsl(216, 47%, 53%);   /* link/active blue */
+
+  /* Signature gradient — used on buttons, scrollbars, accents */
+  --tld-grad-mauve-blue: linear-gradient(to right, var(--tld-mauve), var(--tld-blue));
+  --tld-grad-mauve-blue-v: linear-gradient(180deg, var(--tld-mauve), var(--tld-blue));
+
+  /* ─────────── SEMANTIC color tokens ─────────── */
+  --fg-1: var(--tld-paper);               /* default text on dark */
+  --fg-2: hsl(240, 7%, 70%);              /* muted on dark */
+  --fg-on-light: var(--tld-ink);          /* text on light bg */
+  --fg-accent: var(--tld-mauve);          /* h2, primary accent */
+  --fg-link: var(--tld-paper);
+  --fg-link-hover: var(--tld-mauve);
+  --bg-page: var(--tld-paper);
+  --bg-card: var(--tld-ink);
+  --bg-accent: var(--tld-mauve);
+  --bg-accent-2: var(--tld-blue);
+  --border-default: var(--tld-paper);     /* the 4px paper border around dark cards */
+  --border-dashed: var(--tld-mauve);
+
+  /* ─────────── Project sub-brand palettes ─────────── */
+  /* Teddy Bear Finder — pastel sky + lavender */
+  --tbf-sky:        rgb(198, 231, 255);   /* #C6E7FF */
+  --tbf-lavender:   rgb(217, 198, 255);   /* #D9C6FF */
+  --tbf-sky-soft:   rgba(198, 231, 255, 0.78);
+  --tbf-ink:        rgb(0, 0, 0);
+  --tbf-card:       #FFFFFF;
+  --tbf-grad-hero:  linear-gradient(rgb(198,231,255) 0%, rgb(217,198,255) 50%, rgb(255,255,255) 100%);
+
+  /* Saunders Labs / Stock Market — RIT brand */
+  --rit-orange:     rgb(247, 105, 2);     /* #F76902 — RIT primary */
+  --rit-orange-deep:rgb(170, 8, 8);
+  --rit-ink:        rgb(28, 29, 34);
+  --rit-table-bg:   rgb(241, 241, 241);
+  --rit-row-bg:     rgb(252, 252, 252);
+  --rit-rule:       rgb(143, 142, 142);
+  --rit-row-alt:    rgb(217, 217, 217);
+
+  /* Status / utility */
+  --tld-error:      rgb(203, 10, 10);
+  --tld-shadow:     0px 4px 4px 0px rgba(0,0,0,0.25);
+  --tld-shadow-sm:  0px 2px 4px 0px rgba(0,0,0,0.25);
+  --tld-shadow-lg:  4px 4px 4px 0px rgba(0,0,0,0.25);
+  --tld-shadow-inset: inset 0 0 6px rgba(0,0,0,0.3);
+
+  /* ─────────── Typography stack ─────────── */
+  /* Display & UI labels — Metal is the signature gothic blackletter */
+  --font-display:   'Metal', 'Poltawski Nowy', serif;
+  /* Editorial / hero headlines — Poltawski Nowy used on Teddy Bear Finder */
+  --font-editorial: 'Poltawski Nowy', 'Times New Roman', serif;
+  /* Body — system serif on portfolio; Neuton on RIT Labs */
+  --font-body:      Georgia, 'Neuton', 'Times New Roman', serif;
+  /* Italic accents — Instrument Sans Bold Italic on portfolio cards */
+  --font-italic:    'Instrument Sans', system-ui, sans-serif;
+  /* App-y sans for product surfaces (Teddy Bear) */
+  --font-ui:        'Poppins', 'Inter', system-ui, sans-serif;
+
+  /* Type scale — sizes literally appear in the source */
+  --fs-display-xl: 48px;   /* Poltawski Nowy bold hero */
+  --fs-display-l:  36px;
+  --fs-display-m:  32px;
+  --fs-h1:         34px;
+  --fs-h2:         30px;
+  --fs-h3:         26px;
+  --fs-body-l:     24px;   /* Poppins medium body on Teddy Bear */
+  --fs-body:       20px;   /* Poppins bold for buttons; default body */
+  --fs-body-s:     16px;
+  --fs-ui-label:   15px;   /* Instrument Sans SemiBold */
+  --fs-caption:    14px;
+
+  /* Line-heights */
+  --lh-tight:    1.0;
+  --lh-snug:     1.3;
+  --lh-base:     1.5;
+  --lh-loose:    1.6;
+  --lh-body:     1.55;
+
+  /* Letter-spacing — Metal & Poltawski Nowy get a hairline tracking bump */
+  --tracking-tight:  -0.011em;
+  --tracking-normal: 0.010em;
+  --tracking-wide:   0.030em;
+  --tracking-xwide:  0.050em;
+
+  /* ─────────── Spacing & radii ─────────── */
+  --r-sm:  6px;
+  --r-md:  10px;
+  --r-lg:  12px;     /* main section card */
+  --r-xl:  16px;     /* Teddy Bear button radius */
+  --r-2xl: 21px;     /* Teddy Bear card */
+  --r-3xl: 27px;     /* RIT Labs table outer */
+  --r-pill: 999px;
+  --r-circle: 50%;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 72px;
+
+  /* Borders — the brand uses thick high-contrast outlines */
+  --border-1: 1px solid var(--tld-ink);
+  --border-3: 3px solid var(--tld-paper);   /* face-photo, button outline */
+  --border-3-mauve: 3px dashed var(--tld-mauve);   /* signature "dashed pink" */
+  --border-4: 4px solid var(--tld-paper);   /* main card outline */
+  --border-4-ink: 4px solid var(--tld-ink); /* Teddy Bear card outline */
+  --border-double: 4px double var(--tld-paper);
+
+  /* Motion */
+  --t-fast: 0.2s ease;
+  --t-base: 0.4s ease;        /* portfolio's default */
+  --t-slow: 0.6s ease;
+}
+
+/* ─────────── SEMANTIC element styles ─────────── */
+.tld-body  { font-family: var(--font-body); font-size: var(--fs-body-s); line-height: var(--lh-body); color: var(--fg-1); }
+.tld-h1    { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-h1); line-height: var(--lh-snug); color: var(--fg-accent); letter-spacing: var(--tracking-wide); }
+.tld-h2    { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-h2); line-height: var(--lh-snug); color: var(--fg-accent); letter-spacing: var(--tracking-wide); }
+.tld-h3    { font-family: var(--font-display); font-weight: 600; font-size: var(--fs-h3); line-height: var(--lh-base); color: var(--tld-blue); }
+.tld-editorial { font-family: var(--font-editorial); font-weight: 700; font-size: var(--fs-display-l); line-height: var(--lh-tight); letter-spacing: var(--tracking-xwide); color: var(--tld-ink); }
+.tld-eyebrow   { font-family: var(--font-italic); font-style: italic; font-weight: 700; font-size: var(--fs-ui-label); color: var(--fg-2); letter-spacing: var(--tracking-tight); }
+.tld-emph      { font-family: var(--font-italic); font-style: italic; font-weight: 700; color: var(--fg-1); }
+.tld-link      { color: var(--fg-link); text-decoration: none; transition: color var(--t-base); }
+.tld-link:hover{ color: var(--fg-link-hover); }
+.tld-highlight { color: var(--tld-blue); font-style: italic; font-weight: bold; font-family: var(--font-display); }
+
+/* Signature button — solid mauve fill, paper text, watercolor border image */
+.tld-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  height: 55px;
+  min-width: 131px;
+  padding: 0 22px;
+  background: var(--tld-mauve);
+  color: var(--tld-ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: max(17px, min(4vmin, 24.5px));
+  border: 3px dashed transparent;
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  transition: var(--t-base);
+}
+.tld-btn:hover  { background: var(--tld-ink); color: var(--tld-mauve); font-weight: bold; }
+.tld-btn:active { background: var(--tld-mauve); color: var(--tld-ink); }
+.tld-btn--blue  { background: var(--tld-blue); }
+.tld-btn--blue:hover { color: var(--tld-blue); }
+.tld-btn--gradient { background: var(--tld-grad-mauve-blue); }
+.tld-btn--gradient:hover { background: var(--tld-ink); }
