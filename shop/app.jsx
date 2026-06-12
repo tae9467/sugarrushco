@@ -1,6 +1,14 @@
 // Sugar Rush Co. -- app shell
 const { useState: useAState, useEffect: useAEffect } = React;
 
+// Tax rate -- Florida state + average county = 7%
+const TAX_RATE = 0.07;
+
+// Admin password -- change this to something only you know!
+const ADMIN_PASSWORD = "sugarrush2026";
+
+Object.assign(window, { TAX_RATE, ADMIN_PASSWORD });
+
 // Config -- fill these in when ready
 // 1. Stripe Payment Link from stripe.com/dashboard
 const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/YOUR_LINK_HERE";
@@ -102,6 +110,7 @@ function App() {
   else if (route.name === "contact")  page = <ContactPage go={go} />;
   else if (route.name === "terms")    page = <TermsPage go={go} />;
   else if (route.name === "refunds")  page = <RefundPage go={go} />;
+  else if (route.name === "admin")   page = <AdminPage go={go} />;
   else page = <HomePage t={t} tone={tone} go={go} onAdd={addToCart} />;
 
   return (

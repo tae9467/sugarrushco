@@ -246,30 +246,51 @@ function Footer({ name, go }) {
             <span className="ftr-legal-btn" onClick={() => go("refunds")} role="button" tabIndex={0}>Refund Policy</span>
           </span>
           <span>made with love &amp; a whole lotta glitter</span>
+          <span className="ftr-admin-link" onClick={() => go("admin")} role="button" tabIndex={0}>Admin</span>
         </div>
       </div>
     </footer>
   );
 }
 
+/* -- Stock helper: reads from localStorage overrides, falls back to data.js -- */
+function getStock(productId) {
+  try {
+    const overrides = JSON.parse(localStorage.getItem("sugarrush.inventory") || "{}");
+    const base = SHOP_DATA.products.find((p) => p.id === productId);
+    return overrides[productId] !== undefined ? overrides[productId] : (base ? base.stock : 0);
+  } catch { return 0; }
+}
+
 /* -- Product card -- */
 function ProductCard({ p, go, onAdd, showBlurb }) {
+  const stock = getStock(p.id);
+  const outOfStock = stock === 0;
+  const lowStock = stock > 0 && stock <= 3;
+
   return (
-    <article className="pcard" onClick={() => go("product", { id: p.id })}>
-      <ProductImage product={p} />
+    <article className={"pcard" + (outOfStock ? " pcard--oos" : "")} onClick={() => !outOfStock && go("product", { id: p.id })}>
+      <div className="pcard-img-wrap">
+        <ProductImage product={p} />
+        {outOfStock && <div className="oos-badge">Out of Stock</div>}
+        {lowStock && <div className="low-badge">Only {stock} left!</div>}
+      </div>
       <div className="pcard-body">
         <div className="pcard-meta">{catById(p.cat).label} - ${p.price}</div>
         <h3 className="pcard-name">{p.name}</h3>
         {showBlurb && <p className="pcard-blurb">{p.blurb}</p>}
         <div className="pcard-foot">
           <button className="btn btn--sm btn--ghost"
-            onClick={(e) => { e.stopPropagation(); go("product", { id: p.id }); }}>
+            onClick={(e) => { e.stopPropagation(); go("product", { id: p.id }); }}
+            disabled={outOfStock}>
             View product
           </button>
-          <button className="btn btn--sm"
-            onClick={(e) => { e.stopPropagation(); onAdd(p.id); }}>
-            Add to cart
-          </button>
+          {!outOfStock && (
+            <button className="btn btn--sm"
+              onClick={(e) => { e.stopPropagation(); onAdd(p.id); }}>
+              Add to cart
+            </button>
+          )}
         </div>
       </div>
     </article>
@@ -333,7 +354,7 @@ function Sweetlist({ tone }) {
 
 Object.assign(window, {
   I, CherryIcon, BagIcon, XIcon, CatIcon, InstagramIcon, TikTokIcon, PinterestIcon,
-  catById, productById, THUMB_BG, CAT_GRADIENTS, AWNINGS,
+  catById, productById, THUMB_BG, CAT_GRADIENTS, AWNINGS, getStock,
   ProductImage, Awning, Header, Footer, ProductCard, SectionHead, ReviewStrip, Sweetlist
 });
 
