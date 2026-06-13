@@ -82,13 +82,13 @@ html, body { margin: 0; padding: 0; }
 .awning { position: relative; width: min(940px,100%); margin: 0 auto; }
 .awning-canopy {
   height: 150px;
-  background:
-    repeating-linear-gradient(90deg, var(--awnA,var(--acc)) 0 46px, var(--awnB,#fff) 46px 92px);
+  background: repeating-linear-gradient(90deg, var(--awnA,var(--acc)) 0 46px, var(--awnB,#fff) 46px 92px);
   clip-path: polygon(0 100%, 3.5% 0, 96.5% 0, 100% 100%);
   border-radius: 14px 14px 0 0;
-  outline: 5px solid var(--ink);
-  outline-offset: -5px;
   display: grid; place-items: center;
+}
+.awning-canopy-wrap {
+  filter: drop-shadow(0 5px 0 var(--ink)) drop-shadow(-5px 0 0 var(--ink)) drop-shadow(5px 0 0 var(--ink)) drop-shadow(0 -5px 0 var(--ink));
 }
 .awning-scallop { --sc: var(--ink); }
 .awning--ink .awning-scallop { --sc: var(--ink); }

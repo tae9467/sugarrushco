@@ -136,9 +136,11 @@ function Awning({ awning, name }) {
   const cfg = AWNINGS[awning] || AWNINGS["Accent stripes"];
   return (
     <div className={"awning" + (cfg.ink ? " awning--ink" : "")} style={{ "--awnA": cfg.a, "--awnB": cfg.b }}>
-      <div className="awning-canopy">
-        <div className="awning-sign awning-sign--logo">
-          <img src="shop/assets/logo-header.png" alt={name} className="awning-logo-img" />
+      <div className="awning-canopy-wrap">
+        <div className="awning-canopy">
+          <div className="awning-sign awning-sign--logo">
+            <img src="shop/assets/logo-header.png" alt={name} className="awning-logo-img" />
+          </div>
         </div>
       </div>
       <div className="scallop awning-scallop"></div>
