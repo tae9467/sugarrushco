@@ -9,9 +9,6 @@ function HomeStorefront({ t, tone, go, onAdd }) {
           <div className="eyebrow">{tone.eyebrow}</div>
           <h1 className="hero-title">{tone.title}</h1>
           <p className="hero-sub">{tone.sub}</p>
-          <div className="btn-row" style={{ marginBottom: 48 }}>
-            <button className="btn" onClick={() => go("shop")}>{tone.cta}</button>
-          </div>
           <Awning awning={t.awning} name={t.shopName} />
           <div className="window-card">
             <div className="window-row">

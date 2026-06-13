@@ -460,4 +460,160 @@ function RefundPage({ go }) {
   );
 }
 
+/* ── Admin page ── */
+const SERVER_URL = window.ADMIN_SERVER_URL || "https://sugarrush-server.onrender.com";
+
+function AdminPage({ go }) {
+  const [authed,   setAuthed]   = usePState(false);
+  const [password, setPassword] = usePState("");
+  const [secret,   setSecret]   = usePState("");
+  const [orders,   setOrders]   = usePState([]);
+  const [loading,  setLoading]  = usePState(false);
+  const [err,      setErr]      = usePState("");
+  const [tracking, setTracking] = usePState({});
+  const [sending,  setSending]  = usePState({});
+  const [sent,     setSent]     = usePState({});
+
+  const login = async () => {
+    if (password === (window.ADMIN_PASSWORD || "sugarrush2026")) {
+      setSecret(password);
+      setAuthed(true);
+      fetchOrders(password);
+    } else {
+      setErr("Wrong password.");
+    }
+  };
+
+  const fetchOrders = async (pwd) => {
+    setLoading(true);
+    setErr("");
+    try {
+      const res  = await fetch(SERVER_URL + "/orders", {
+        headers: { "x-admin-secret": pwd || secret }
+      });
+      if (!res.ok) throw new Error("Auth failed");
+      const data = await res.json();
+      setOrders(data);
+    } catch (e) {
+      setErr("Could not load orders: " + e.message);
+    }
+    setLoading(false);
+  };
+
+  const sendTracking = async (order) => {
+    const num = (tracking[order.id] || "").trim();
+    if (!num) return;
+    setSending((s) => ({ ...s, [order.id]: true }));
+    setErr("");
+    try {
+      const res = await fetch(SERVER_URL + "/track", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body:    JSON.stringify({ order_id: order.id, tracking_number: num })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setSent((s) => ({ ...s, [order.id]: true }));
+      setOrders((prev) => prev.map((o) =>
+        o.id === order.id ? { ...o, tracking_number: num, tracking_sent: true, status: "shipped" } : o
+      ));
+    } catch (e) {
+      setErr("Error: " + e.message);
+    }
+    setSending((s) => ({ ...s, [order.id]: false }));
+  };
+
+  if (!authed) return (
+    <div className="confirm-wrap" data-screen-label="Admin login">
+      <div className="confirm" style={{ maxWidth: 380 }}>
+        <CherryIcon size={36} />
+        <h1 className="confirm-h" style={{ fontSize: 22 }}>Admin login</h1>
+        <div className="field" style={{ width: "100%", marginBottom: 14 }}>
+          <input className={"input" + (err ? " is-bad" : "")} type="password"
+            placeholder="Password" value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") login(); }} />
+          {err && <span className="field-err">{err}</span>}
+        </div>
+        <button className="btn btn--wide" onClick={login}>Enter</button>
+        <button className="btn btn--ghost btn--sm" style={{ marginTop: 10 }} onClick={() => go("home")}>Back to shop</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="rail sec" data-screen-label="Admin">
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 28, flexWrap:"wrap", gap: 12 }}>
+        <h1 style={{ margin:0, fontFamily:"var(--disp)", fontSize:"clamp(24px,4vw,36px)" }}>Order Dashboard</h1>
+        <div style={{ display:"flex", gap: 10 }}>
+          <button className="btn btn--sm" onClick={() => fetchOrders()}>Refresh</button>
+          <button className="btn btn--ghost btn--sm" onClick={() => go("home")}>Back to shop</button>
+        </div>
+      </div>
+
+      {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:10, padding:"12px 16px", marginBottom:20, color:"#900" }}>{err}</div>}
+
+      {loading && <p style={{ textAlign:"center", opacity:.6 }}>Loading orders...</p>}
+
+      {!loading && orders.length === 0 && (
+        <div style={{ textAlign:"center", opacity:.55, padding:"60px 0" }}>
+          <CherryIcon size={40} />
+          <p style={{ marginTop:14 }}>No orders yet — they'll show up here once Stripe payments come in.</p>
+        </div>
+      )}
+
+      {orders.map((order) => {
+        const isShipped = order.tracking_sent || order.status === "shipped";
+        return (
+          <div key={order.id} style={{
+            border: "3px solid var(--ink)", borderRadius: 16, padding: "22px 26px",
+            marginBottom: 18, background: "var(--tld-white)",
+            boxShadow: "var(--tld-shadow)"
+          }}>
+            <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+              <div>
+                <span style={{ fontFamily:"var(--disp)", fontWeight:700, fontSize:18 }}>{order.order_no}</span>
+                <span style={{
+                  marginLeft:12, fontSize:12, fontWeight:700, textTransform:"uppercase",
+                  letterSpacing:".06em", padding:"3px 10px", borderRadius:99,
+                  background: isShipped ? "#d4f7d4" : "#fff3cd",
+                  color:      isShipped ? "#1a6b1a" : "#7a5800"
+                }}>{order.status || "paid"}</span>
+              </div>
+              <span style={{ fontSize:13, opacity:.55 }}>{order.created_at ? new Date(order.created_at).toLocaleDateString() : ""}</span>
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 24px", fontSize:14, marginBottom:14 }}>
+              <span><strong>Name:</strong> {order.customer_name}</span>
+              <span><strong>Email:</strong> {order.customer_email}</span>
+              <span style={{ gridColumn:"1/-1" }}><strong>Address:</strong> {order.customer_address}</span>
+              <span><strong>Total:</strong> ${Number(order.total).toFixed(2)}</span>
+              <span><strong>Items:</strong> {order.items}</span>
+            </div>
+
+            {isShipped ? (
+              <div style={{ background:"#d4f7d4", borderRadius:10, padding:"10px 16px", fontSize:14 }}>
+                Tracking sent: <strong>{order.tracking_number}</strong>
+              </div>
+            ) : (
+              <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+                <input className="input" style={{ flex:1, minWidth:200, maxWidth:340 }}
+                  placeholder="USPS tracking number"
+                  value={tracking[order.id] || ""}
+                  onChange={(e) => setTracking((t) => ({ ...t, [order.id]: e.target.value }))} />
+                <button className="btn btn--sm"
+                  disabled={sending[order.id] || sent[order.id]}
+                  style={(sending[order.id] || sent[order.id]) ? { opacity:.65 } : null}
+                  onClick={() => sendTracking(order)}>
+                  {sending[order.id] ? "Sending…" : sent[order.id] ? "Sent!" : "Send tracking email"}
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 Object.assign(window, { ShopPage, ProductPage, CartDrawer, CheckoutPage, ConfirmPage, ContactPage, TermsPage, RefundPage, AdminPage });

@@ -17,8 +17,10 @@ const EMAILJS_SERVICE_ID  = "YOUR_SERVICE_ID";
 const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";
 const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";
 // 3. Your contact email
-const CONTACT_EMAIL = "info@thinkbudgetco.com";
-// 4. Social handles (leave blank to hide)
+const CONTACT_EMAIL = "info@sugarrushco.shop";
+// 4. Your Render server URL (fill in after deploying to Render)
+const ADMIN_SERVER_URL = "https://sugarrush-server.onrender.com";
+// 5. Social handles (leave blank to hide)
 const SOCIAL = {
   instagram: "sugarrushco",
   tiktok:    "sugarrushco",
@@ -29,6 +31,7 @@ Object.assign(window, {
   STRIPE_PAYMENT_LINK,
   EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, EMAILJS_PUBLIC_KEY,
   CONTACT_EMAIL,
+  ADMIN_SERVER_URL,
   SOCIAL
 });
 
