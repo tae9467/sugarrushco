@@ -1,4 +1,4 @@
-// Sugar Rush Co. — shop, product, cart drawer, checkout, confirm, about, contact
+// Sugar Rush Co. ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â shop, product, cart drawer, checkout, confirm, about, contact
 const { useState: usePState, useMemo: usePMemo, useEffect: usePEffect, useRef: usePRef } = React;
 
 /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Shop page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
@@ -31,8 +31,8 @@ function ProductPage({ route, go, onAdd }) {
   const [qty, setQty] = usePState(1);
   const pairs = SHOP_DATA.products.filter((x) => x.id !== p.id && x.cat === p.cat).slice(0, 2);
   return (
-    <div className="rail sec" data-screen-label={"Product · " + p.name}>
-      <button className="crumb" onClick={() => go("shop", { cat: p.cat })}>← back to {catById(p.cat).label.toLowerCase()}</button>
+    <div className="rail sec" data-screen-label={"Product Ãƒâ€šÃ‚Â· " + p.name}>
+      <button className="crumb" onClick={() => go("shop", { cat: p.cat })}>ÃƒÂ¢Ã¢â‚¬Â Ã‚Â back to {catById(p.cat).label.toLowerCase()}</button>
       <div className="pp">
         <div className="pp-photo">
           <ProductImage product={p} height={470} radius={20} />
@@ -44,12 +44,12 @@ function ProductPage({ route, go, onAdd }) {
           <ul className="notes">{p.notes.map((n) => <li key={n}>{n}</li>)}</ul>
           <div className="pp-buy">
             <div className="qty">
-              <button onClick={() =>−</button>
+              <button onClick={() => setQty(Math.max(1, qty - 1))} aria-label="Less">ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢</button>
               <span>{qty}</span>
               <button onClick={() => setQty(qty + 1)} aria-label="More">+</button>
             </div>
             <button className="btn" onClick={() => { onAdd(p.id, qty); setQty(1); }}>
-              {`Add to cart · $${p.price * qty}`}
+              {`Add to cart Ãƒâ€šÃ‚Â· $${p.price * qty}`}
             </button>
           </div>
           <div className="pp-rule tld-wc-rule"></div>
@@ -90,7 +90,7 @@ function CartDrawer({ open, cart, setQty, remove, subtotal, onClose, onCheckout 
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end" }}>
                   <div className="qty">
-                    <button onClick={() =>−</button>
+                    <button onClick={() => setQty(line.id, line.qty - 1)} aria-label="Less">ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢</button>
                     <span>{line.qty}</span>
                     <button onClick={() => setQty(line.id, line.qty + 1)} aria-label="More">+</button>
                   </div>
@@ -111,7 +111,7 @@ function CartDrawer({ open, cart, setQty, remove, subtotal, onClose, onCheckout 
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Checkout — uses Stripe Payment Link (no backend needed) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Checkout ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â uses Stripe Payment Link (no backend needed) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 const CO_FIELDS = [
   { id:"name",    label:"Full name", full:false, ph:"Your name" },
   { id:"email",   label:"Email",     full:false, ph:"you@email.com" },
@@ -154,7 +154,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     localStorage.setItem("sugarrush.pending_order", JSON.stringify({ cart, form, total, orderNo }));
 
     if (paymentLinkReady) {
-      // Build Payment Link URL — pre-fills amount + email on Stripe's page
+      // Build Payment Link URL ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â pre-fills amount + email on Stripe's page
       const url = new URL(window.STRIPE_PAYMENT_LINK);
       url.searchParams.set("prefilled_amount", Math.round(total * 100));
       url.searchParams.set("prefilled_email",  form.email);
@@ -162,19 +162,19 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
       // Set this in your Stripe Payment Link settings ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ After payment ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Redirect to URL
       window.location.href = url.toString();
     } else {
-      // Demo mode — no Payment Link configured yet
+      // Demo mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no Payment Link configured yet
       onPlaced();
     }
   };
 
   return (
     <div className="rail sec" data-screen-label="Checkout">
-      <button className="crumb" onClick={() => go("shop")}>← keep shopping</button>
+      <button className="crumb" onClick={() => go("shop")}>ÃƒÂ¢Ã¢â‚¬Â Ã‚Â keep shopping</button>
       <SectionHead title="Checkout" />
 
       {!paymentLinkReady && (
         <div className="stripe-demo-note" style={{ marginBottom: 24 }}>
-          <span>🔗</span>
+          <span>ÃƒÂ°Ã…Â¸Ã¢â‚¬ÂÃ¢â‚¬â€</span>
           <span>
             <strong>Payment Link not connected yet.</strong> Create a Payment Link in your Stripe
             dashboard (set price to "Customer chooses"), paste it into <code>shop/app.jsx</code>, and
@@ -200,12 +200,12 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
 
           <div style={{ marginTop: 26 }}>
             <button className="btn btn--wide" onClick={place}>
-              {paymentLinkReady ? `Continue to payment · $${total}` : `Place order · $${total}`}
+              {paymentLinkReady ? `Continue to payment Ãƒâ€šÃ‚Â· $${total}` : `Place order Ãƒâ€šÃ‚Â· $${total}`}
             </button>
             <p style={{ font:"italic 600 12.5px var(--font-italic)", opacity:0.6, textAlign:"center", marginTop:8 }}>
               {paymentLinkReady
-                ? "You'll be taken to Stripe's secure checkout — then brought right back."
-                : "(demo mode — no card charged)"}
+                ? "You'll be taken to Stripe's secure checkout ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â then brought right back."
+                : "(demo mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no card charged)"}
             </p>
           </div>
         </div>
@@ -217,7 +217,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
             const p = productById(line.id);
             return p ? (
               <div className="co-line" key={line.id}>
-                <span>{p.name} × {}</span><strong>${p.price * line.qty}</strong>
+                <span>{p.name} ÃƒÆ’Ã¢â‚¬â€ {line.qty}</span><strong>${p.price * line.qty}</strong>
               </div>
             ) : null;
           })}
@@ -250,7 +250,7 @@ function ConfirmPage({ go }) {
     if (!window.emailjs) return;
     if (!window.EMAILJS_SERVICE_ID || window.EMAILJS_SERVICE_ID.includes("YOUR_")) return;
     if (!order.form || !order.form.email) return;
-    const itemList = items.map((l) => `${l.product.name} x${l.qty} — $${l.product.price * l.qty}`).join("\n");
+    const itemList = items.map((l) => `${l.product.name} x${l.qty} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â $${l.product.price * l.qty}`).join("\n");
     window.emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
       to_name:    order.form.name,
       to_email:   order.form.email,
@@ -265,13 +265,13 @@ function ConfirmPage({ go }) {
     <div className="confirm-wrap" data-screen-label="Order confirmed">
       <div className="confirm">
         <CherryIcon size={46} />
-        <h1 className="confirm-h">Order confirmed — sweet!!</h1>
+        <h1 className="confirm-h">Order confirmed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â sweet!!</h1>
         <div className="confirm-no">order no. {orderNo}</div>
         {items.length > 0 && (
           <div className="confirm-items">
             {items.map((l) => (
               <div key={l.id} className="confirm-item">
-                <span>{l.product.name} × {}</span>
+                <span>{l.product.name} ÃƒÆ’Ã¢â‚¬â€ {l.qty}</span>
                 <span>${l.product.price * l.qty}</span>
               </div>
             ))}
@@ -298,7 +298,11 @@ function ContactPage({ go }) {
   const [form, setForm]   = usePState({ name:"", email:"", msg:"" });
   const [errs, setErrs]   = usePState({});
   const [sent, setSent]   = usePState(false);
-  const [sending, setSending…"needed, please!";
+  const [sending, setSending] = usePState(false);
+
+  const validate = () => {
+    const e = {};
+    if (!form.name.trim())  e.name  = "needed, please!";
     if (!form.email.trim()) e.email = "needed, please!";
     if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = "hmm, that email looks off";
     if (!form.msg.trim())   e.msg   = "tell us something!";
@@ -308,7 +312,8 @@ function ContactPage({ go }) {
 
   const send = async () => {
     if (!validate()) return;
-    setSending…"YOUR_")) {
+    setSending(true);
+    if (window.emailjs && window.EMAILJS_SERVICE_ID && !window.EMAILJS_SERVICE_ID.includes("YOUR_")) {
       try {
         await window.emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
           from_name:  form.name,
@@ -319,7 +324,12 @@ function ContactPage({ go }) {
         }, window.EMAILJS_PUBLIC_KEY);
       } catch (err) { /* fail gracefully */ }
     }
-    setSending…"confirm-wrap" data-screen-label="Message sent">
+    setSending(false);
+    setSent(true);
+  };
+
+  if (sent) return (
+    <div className="confirm-wrap" data-screen-label="Message sent">
       <div className="confirm">
         <CherryIcon size={46} />
         <h1 className="confirm-h">Message sent!!</h1>
@@ -335,7 +345,7 @@ function ContactPage({ go }) {
         <SectionHead title="Say hi!" />
         <p className="contact-intro">
           Questions about an order? Want to stock Sugar Rush Co. in your store? Just want to say hi?
-          We’d love to hear from you — we try to reply within 24 hours.
+          We'd love to hear from you ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â we try to reply within 24 hours.
         </p>
         <div className="contact-form">
           <div className="field">
@@ -362,7 +372,7 @@ function ContactPage({ go }) {
           </div>
           <button className="btn btn--wide" onClick={send} disabled={sending}
             style={sending ? { opacity:0.65, cursor:"wait" } : null}>
-            {sending ? "Sending…" : "Send message"}
+            {sending ? "SendingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : "Send message"}
           </button>
         </div>
       </div>
@@ -382,7 +392,7 @@ function TermsPage({ go }) {
         <p>By placing an order with THINK BUDGET CO, LLC ("we", "us", "our"), you agree to these terms. Please read them carefully before purchasing.</p>
 
         <h2>2. Products</h2>
-        <p>All products are small-batch and handmade. Product descriptions, images, and scents are as accurate as possible, but slight variations may occur. Our lip glosses, body butters, and perfumes are cosmetic products intended for external use only. Slimes and squishies are not intended for consumption — keep away from young children.</p>
+        <p>All products are small-batch and handmade. Product descriptions, images, and scents are as accurate as possible, but slight variations may occur. Our lip glosses, body butters, and perfumes are cosmetic products intended for external use only. Slimes and squishies are not intended for consumption ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â keep away from young children.</p>
 
         <h2>3. Orders & Payment</h2>
         <p>All orders are processed through Stripe, a secure third-party payment processor. We do not store your card details. Prices are listed in USD and are subject to change without notice. We reserve the right to cancel any order for any reason, with a full refund issued.</p>
@@ -425,7 +435,7 @@ function RefundPage({ go }) {
         <p>We want you to love every single thing you get from Sugar Rush Co. If something isn't right, we'll make it right.</p>
 
         <h2>Returns & Exchanges</h2>
-        <p>Due to the handmade and personal-care nature of our products, we do not accept returns on opened items. However, if your order arrives damaged, defective, or incorrect, we will gladly send a replacement or issue a full refund — no questions asked.</p>
+        <p>Due to the handmade and personal-care nature of our products, we do not accept returns on opened items. However, if your order arrives damaged, defective, or incorrect, we will gladly send a replacement or issue a full refund ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no questions asked.</p>
 
         <h2>How to Request a Refund</h2>
         <p>Contact us within <strong>7 days</strong> of receiving your order. Include your order number and a photo of the issue. We will respond within 24-48 hours with a resolution.</p>
@@ -440,7 +450,7 @@ function RefundPage({ go }) {
         <p>Approved refunds are processed within 3-5 business days back to your original payment method.</p>
 
         <h2>Questions?</h2>
-        <p><button className="legal-link" onClick={() => go("contact")}>Reach out to us</button> — we are always happy to help.</p>
+        <p><button className="legal-link" onClick={() => go("contact")}>Reach out to us</button> ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â we are always happy to help.</p>
 
         <div className="btn-row" style={{ justifyContent: "flex-start", marginTop: 32 }}>
           <button className="btn btn--ghost btn--sm" onClick={() => go("home")}>Back to shop</button>
@@ -651,7 +661,11 @@ function AdminPage({ go }) {
   const [loading,  setLoading]  = usePState(false);
   const [err,      setErr]      = usePState("");
   const [tracking, setTracking] = usePState({});
-  const [sending,  setSending…"sugarrush2026")) {
+  const [sending,  setSending]  = usePState({});
+  const [sent,     setSent]     = usePState({});
+
+  const login = async () => {
+    if (password === (window.ADMIN_PASSWORD || "sugarrush2026")) {
       setSecret(password);
       setAuthed(true);
       fetchOrders(password);
@@ -679,7 +693,8 @@ function AdminPage({ go }) {
   const sendTracking = async (order) => {
     const num = (tracking[order.id] || "").trim();
     if (!num) return;
-    setSending…"");
+    setSending((s) => ({ ...s, [order.id]: true }));
+    setErr("");
     try {
       const res = await fetch(SERVER_URL + "/track", {
         method:  "POST",
@@ -695,7 +710,11 @@ function AdminPage({ go }) {
     } catch (e) {
       setErr("Error: " + e.message);
     }
-    setSending…"confirm-wrap" data-screen-label="Admin login">
+    setSending((s) => ({ ...s, [order.id]: false }));
+  };
+
+  if (!authed) return (
+    <div className="confirm-wrap" data-screen-label="Admin login">
       <div className="confirm" style={{ maxWidth: 380 }}>
         <CherryIcon size={36} />
         <h1 className="confirm-h" style={{ fontSize: 22 }}>Admin login</h1>
