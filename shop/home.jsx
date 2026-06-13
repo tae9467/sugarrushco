@@ -1,7 +1,7 @@
 // Sugar Rush Co. -- home page: 3 variants + shared sections
 
 function HomeStorefront({ t, tone, go, onAdd }) {
-  const featured = SHOP_DATA.featured.slice(0, 3).map(productById);
+  const featured = SHOP_DATA.featured.slice(0, 4).map(productById);
   return (
     <div data-screen-label="Home - Storefront">
       <section className="sec center" style={{ paddingBottom: 70 }}>
