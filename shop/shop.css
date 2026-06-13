@@ -87,16 +87,8 @@ html, body { margin: 0; padding: 0; }
   border-radius: 14px 14px 0 0;
   display: grid; place-items: center;
 }
-.awning-scallop {
-  --sc: var(--awnA,var(--acc));
-  background-image:
-    radial-gradient(circle at 50% 0, var(--sc) 13px, transparent 13.6px),
-    radial-gradient(circle at 50% 0, var(--ink) 15px, transparent 15.6px);
-  background-size: 28px 14px;
-  background-position: 50% 0;
-  background-repeat: repeat-x;
-}
-.awning--ink .awning-scallop { --sc: var(--acc); }
+.awning-scallop { --sc: var(--ink); }
+.awning--ink .awning-scallop { --sc: var(--ink); }
 .awning-sign {
   width: 256px; height: 106px; border-radius: 50%;
   background: var(--tld-white); border: 3px solid var(--ink);

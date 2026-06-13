@@ -4,8 +4,8 @@ const { useState: useAState, useEffect: useAEffect } = React;
 // Tax rate -- Florida state + average county = 7%
 const TAX_RATE = 0.07;
 
-// Admin password -- change this to something only you know!
-const ADMIN_PASSWORD = "sugarrush2026";
+// Admin password -- must match ADMIN_SECRET in Render environment variables
+const ADMIN_PASSWORD = "StacyBeShein111779!";
 
 Object.assign(window, { TAX_RATE, ADMIN_PASSWORD });
 
@@ -67,6 +67,10 @@ function App() {
     if (params.get("payment") === "success") {
       window.history.replaceState({}, "", window.location.pathname);
       return { name: "confirm" };
+    }
+    if (params.get("admin") === "1") {
+      window.history.replaceState({}, "", window.location.pathname);
+      return { name: "admin" };
     }
     return loadJSON(ROUTE_KEY, { name: "home" });
   }, []);

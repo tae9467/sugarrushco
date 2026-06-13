@@ -246,7 +246,6 @@ function Footer({ name, go }) {
             <span className="ftr-legal-btn" onClick={() => go("refunds")} role="button" tabIndex={0}>Refund Policy</span>
           </span>
           <span>made with love &amp; a whole lotta glitter</span>
-          <span className="ftr-admin-link" onClick={() => go("admin")} role="button" tabIndex={0}>Admin</span>
         </div>
       </div>
     </footer>

@@ -1,9 +1,7 @@
-// Sugar Rush Co. ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â shop, product, cart drawer, checkout, confirm, about, contact
+// Sugar Rush Co. — shop, product, cart drawer, checkout, confirm, about, contact
 const { useState: usePState, useMemo: usePMemo, useEffect: usePEffect, useRef: usePRef } = React;
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Shop page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-function ShopPage({ route, go, onAdd }) {
-  const cat  = route.cat || "all";
+/* "all";
   const list = SHOP_DATA.products.filter((p) => cat === "all" || p.cat === cat);
   return (
     <div className="rail sec" data-screen-label="Shop">
@@ -25,14 +23,10 @@ function ShopPage({ route, go, onAdd }) {
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Product page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-function ProductPage({ route, go, onAdd }) {
-  const p     = productById(route.id) || SHOP_DATA.products[0];
-  const [qty, setQty] = usePState(1);
-  const pairs = (p.pair || []).map(productById).filter(Boolean).filter((x) => x.id !== p.id).slice(0, 2);
+/* > x.id !== p.id).slice(0, 2);
   return (
-    <div className="rail sec" data-screen-label={"Product Ãƒâ€šÃ‚Â· " + p.name}>
-      <button className="crumb" onClick={() => go("shop", { cat: p.cat })}>ÃƒÂ¢Ã¢â‚¬Â Ã‚Â back to {catById(p.cat).label.toLowerCase()}</button>
+    <div className="rail sec" data-screen-label={"Product · " + p.name}>
+      <button className="crumb" onClick={() => go("shop", { cat: p.cat })}>← back to lip gloss</button>
       <div className="pp">
         <div className="pp-photo">
           <ProductImage product={p} height={470} radius={20} />
@@ -44,12 +38,12 @@ function ProductPage({ route, go, onAdd }) {
           <ul className="notes">{p.notes.map((n) => <li key={n}>{n}</li>)}</ul>
           <div className="pp-buy">
             <div className="qty">
-              <button onClick={() => setQty(Math.max(1, qty - 1))} aria-label="Less">ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢</button>
+              <button onClick={() => setQty(Math.max(1, qty - 1))} aria-label="Less">−</button>
               <span>{qty}</span>
               <button onClick={() => setQty(qty + 1)} aria-label="More">+</button>
             </div>
             <button className="btn" onClick={() => { onAdd(p.id, qty); setQty(1); }}>
-              {`Add to cart Ãƒâ€šÃ‚Â· $${p.price * qty}`}
+              {`Add to cart · $${p.price * qty}`}
             </button>
           </div>
           <div className="pp-rule tld-wc-rule"></div>
@@ -63,11 +57,7 @@ function ProductPage({ route, go, onAdd }) {
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Cart drawer ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-function CartDrawer({ open, cart, setQty, remove, subtotal, onClose, onCheckout }) {
-  if (!open) return null;
-  return (
-    <React.Fragment>
+/* <React.Fragment>
       <button className="overlay" onClick={onClose} aria-label="Close cart"></button>
       <aside className="drawer" data-screen-label="Cart drawer">
         <div className="drawer-head">
@@ -90,7 +80,7 @@ function CartDrawer({ open, cart, setQty, remove, subtotal, onClose, onCheckout 
                 </div>
                 <div style={{ display:"flex", flexDirection:"column", gap:6, alignItems:"flex-end" }}>
                   <div className="qty">
-                    <button onClick={() => setQty(line.id, line.qty - 1)} aria-label="Less">ÃƒÂ¢Ã‹â€ Ã¢â‚¬â„¢</button>
+                    <button onClick={() => setQty(line.id, line.qty - 1)} aria-label="Less">−</button>
                     <span>{line.qty}</span>
                     <button onClick={() => setQty(line.id, line.qty + 1)} aria-label="More">+</button>
                   </div>
@@ -111,9 +101,7 @@ function CartDrawer({ open, cart, setQty, remove, subtotal, onClose, onCheckout 
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Checkout ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â uses Stripe Payment Link (no backend needed) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-const CO_FIELDS = [
-  { id:"name",    label:"Full name", full:false, ph:"Your name" },
+/* "name",    label:"Full name", full:false, ph:"Your name" },
   { id:"email",   label:"Email",     full:false, ph:"you@email.com" },
   { id:"address", label:"Address",   full:true,  ph:"123 Sweet St" },
   { id:"city",    label:"City",      full:false, ph:"Sugartown" },
@@ -154,22 +142,13 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     localStorage.setItem("sugarrush.pending_order", JSON.stringify({ cart, form, total, orderNo }));
 
     if (paymentLinkReady) {
-      // Build Payment Link URL ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â pre-fills amount + email on Stripe's page
+      // Build Payment Link URL — pre-fills amount + email on Stripe's page
       const url = new URL(window.STRIPE_PAYMENT_LINK);
       url.searchParams.set("prefilled_amount", Math.round(total * 100));
       url.searchParams.set("prefilled_email",  form.email);
       // Tell Stripe where to send them after payment (your site + ?payment=success)
-      // Set this in your Stripe Payment Link settings ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ After payment ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Redirect to URL
-      window.location.href = url.toString();
-    } else {
-      // Demo mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no Payment Link configured yet
-      onPlaced();
-    }
-  };
-
-  return (
-    <div className="rail sec" data-screen-label="Checkout">
-      <button className="crumb" onClick={() => go("shop")}>ÃƒÂ¢Ã¢â‚¬Â Ã‚Â keep shopping</button>
+      // Set this in your Stripe Payment Link settings <div className="rail sec" data-screen-label="Checkout">
+      <button className="crumb" onClick={() => go("shop")}>← keep shopping</button>
       <SectionHead title="Checkout" />
 
       {!paymentLinkReady && (
@@ -184,8 +163,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
       )}
 
       <div className="co">
-        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Left: shipping info ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
-        <div>
+        {/* <div>
           <div className="co-form">
             {CO_FIELDS.map((f) => (
               <div key={f.id} className={"field" + (f.full ? " field--full" : "")}>
@@ -200,18 +178,17 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
 
           <div style={{ marginTop: 26 }}>
             <button className="btn btn--wide" onClick={place}>
-              {paymentLinkReady ? `Continue to payment Ãƒâ€šÃ‚Â· $${total}` : `Place order Ãƒâ€šÃ‚Â· $${total}`}
+              {paymentLinkReady ? `Continue to payment · $${total}` : `Place order · $${total}`}
             </button>
             <p style={{ font:"italic 600 12.5px var(--font-italic)", opacity:0.6, textAlign:"center", marginTop:8 }}>
               {paymentLinkReady
-                ? "You'll be taken to Stripe's secure checkout ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â then brought right back."
-                : "(demo mode ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no card charged)"}
+                ? "You'll be taken to Stripe's secure checkout — then brought right back."
+                : "(demo mode — no card charged)"}
             </p>
           </div>
         </div>
 
-        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Right: order summary ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
-        <div className="co-card">
+        {/* <div className="co-card">
           <h3>Your order</h3>
           {cart.map((line) => {
             const p = productById(line.id);
@@ -236,9 +213,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Order confirmation ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-function ConfirmPage({ go }) {
-  const order  = React.useMemo(() => {
+/* > {
     try { return JSON.parse(localStorage.getItem("sugarrush.pending_order")) || {}; }
     catch { return {}; }
   }, []);
@@ -250,7 +225,7 @@ function ConfirmPage({ go }) {
     if (!window.emailjs) return;
     if (!window.EMAILJS_SERVICE_ID || window.EMAILJS_SERVICE_ID.includes("YOUR_")) return;
     if (!order.form || !order.form.email) return;
-    const itemList = items.map((l) => `${l.product.name} x${l.qty} ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â $${l.product.price * l.qty}`).join("\n");
+    const itemList = items.map((l) => `${l.product.name} x${l.qty} — $${l.product.price * l.qty}`).join("\n");
     window.emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
       to_name:    order.form.name,
       to_email:   order.form.email,
@@ -265,7 +240,7 @@ function ConfirmPage({ go }) {
     <div className="confirm-wrap" data-screen-label="Order confirmed">
       <div className="confirm">
         <CherryIcon size={46} />
-        <h1 className="confirm-h">Order confirmed ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â sweet!!</h1>
+        <h1 className="confirm-h">Order confirmed — sweet!!</h1>
         <div className="confirm-no">order no. {orderNo}</div>
         {items.length > 0 && (
           <div className="confirm-items">
@@ -293,9 +268,7 @@ function ConfirmPage({ go }) {
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Contact ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-function ContactPage({ go }) {
-  const [form, setForm]   = usePState({ name:"", email:"", msg:"" });
+/* "", email:"", msg:"" });
   const [errs, setErrs]   = usePState({});
   const [sent, setSent]   = usePState(false);
   const [sending, setSending] = usePState(false);
@@ -372,7 +345,7 @@ function ContactPage({ go }) {
           </div>
           <button className="btn btn--wide" onClick={send} disabled={sending}
             style={sending ? { opacity:0.65, cursor:"wait" } : null}>
-            {sending ? "SendingÃƒÂ¢Ã¢â€šÂ¬Ã‚Â¦" : "Send message"}
+            {sending ? "Sending…" : "Send message"}
           </button>
         </div>
       </div>
@@ -380,10 +353,7 @@ function ContactPage({ go }) {
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Terms of Service ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-function TermsPage({ go }) {
-  return (
-    <div className="rail sec legal-page" data-screen-label="Terms of Service">
+/* <div className="rail sec legal-page" data-screen-label="Terms of Service">
       <div className="legal-card">
         <h1 className="legal-h">Terms of Service</h1>
         <p className="legal-date">Last updated: June 2026</p>
@@ -392,7 +362,7 @@ function TermsPage({ go }) {
         <p>By placing an order with THINK BUDGET CO, LLC ("we", "us", "our"), you agree to these terms. Please read them carefully before purchasing.</p>
 
         <h2>2. Products</h2>
-        <p>All products are small-batch and handmade. Product descriptions, images, and scents are as accurate as possible, but slight variations may occur. Our lip glosses, body butters, and perfumes are cosmetic products intended for external use only. Slimes and squishies are not intended for consumption ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â keep away from young children.</p>
+        <p>All products are small-batch and handmade. Product descriptions, images, and scents are as accurate as possible, but slight variations may occur. Our lip glosses, body butters, and perfumes are cosmetic products intended for external use only. Slimes and squishies are not intended for consumption — keep away from young children.</p>
 
         <h2>3. Orders & Payment</h2>
         <p>All orders are processed through Stripe, a secure third-party payment processor. We do not store your card details. Prices are listed in USD and are subject to change without notice. We reserve the right to cancel any order for any reason, with a full refund issued.</p>
@@ -423,10 +393,7 @@ function TermsPage({ go }) {
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Refund Policy ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-function RefundPage({ go }) {
-  return (
-    <div className="rail sec legal-page" data-screen-label="Refund Policy">
+/* <div className="rail sec legal-page" data-screen-label="Refund Policy">
       <div className="legal-card">
         <h1 className="legal-h">Refund Policy</h1>
         <p className="legal-date">Last updated: June 2026</p>
@@ -435,7 +402,7 @@ function RefundPage({ go }) {
         <p>We want you to love every single thing you get from Sugar Rush Co. If something isn't right, we'll make it right.</p>
 
         <h2>Returns & Exchanges</h2>
-        <p>Due to the handmade and personal-care nature of our products, we do not accept returns on opened items. However, if your order arrives damaged, defective, or incorrect, we will gladly send a replacement or issue a full refund ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â no questions asked.</p>
+        <p>Due to the handmade and personal-care nature of our products, we do not accept returns on opened items. However, if your order arrives damaged, defective, or incorrect, we will gladly send a replacement or issue a full refund — no questions asked.</p>
 
         <h2>How to Request a Refund</h2>
         <p>Contact us within <strong>7 days</strong> of receiving your order. Include your order number and a photo of the issue. We will respond within 24-48 hours with a resolution.</p>
@@ -450,7 +417,7 @@ function RefundPage({ go }) {
         <p>Approved refunds are processed within 3-5 business days back to your original payment method.</p>
 
         <h2>Questions?</h2>
-        <p><button className="legal-link" onClick={() => go("contact")}>Reach out to us</button> ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â we are always happy to help.</p>
+        <p><button className="legal-link" onClick={() => go("contact")}>Reach out to us</button> — we are always happy to help.</p>
 
         <div className="btn-row" style={{ justifyContent: "flex-start", marginTop: 32 }}>
           <button className="btn btn--ghost btn--sm" onClick={() => go("home")}>Back to shop</button>
