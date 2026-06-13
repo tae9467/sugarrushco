@@ -118,7 +118,7 @@ html, body { margin: 0; padding: 0; }
 /* ---- hero text ---- */
 .eyebrow    { font: italic 700 16px var(--font-italic); color: var(--acc2); letter-spacing: .02em; }
 .hero-title { font-family: var(--disp); font-weight: 700; font-size: clamp(42px,6.4vw,66px); line-height: 1.04; letter-spacing: var(--tracking-wide); margin: 14px 0 18px; overflow-wrap: break-word; }
-.hero-sub   { font: 500 18px/1.65 var(--font-ui); max-width: 580px; margin: 0 auto 28px; overflow-wrap: break-word; opacity: .85; }
+.hero-sub   { font: 500 18px/1.65 var(--font-ui); max-width: 680px; margin: 0 auto 28px; overflow-wrap: break-word; opacity: .85; }
 
 /* ---- circus hero ---- */
 .circus-hero   { background: linear-gradient(160deg,#f8f4ff 0%,#f5f0ff 100%); padding-bottom: 70px; }
