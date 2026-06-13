@@ -481,9 +481,9 @@ html, body { margin: 0; padding: 0; }
 /* ---- footer logo row: always has min height so gap never collapses ---- */
 .ftr-logo-row { min-height: 100px; }
 
-/* ---- email link in contact ---- */
-a.legal-link { color: var(--acc2); text-decoration: underline; }
-a.legal-link:hover { color: var(--acc); }
+/* ---- legal-link button (looks like inline text link) ---- */
+.legal-link { background: none; border: none; padding: 0; margin: 0; font: inherit; color: var(--acc2); text-decoration: underline; cursor: pointer; display: inline; }
+.legal-link:hover { color: var(--ink); }
 
 /* ---- gap fix: ensure no margin between page sections ---- */
 .shop-root > .page { display: block; }
