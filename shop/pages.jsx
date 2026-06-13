@@ -1,4 +1,4 @@
-// Sugar Rush Co. — shop, product, cart drawer, checkout, confirm, about, contact
+// Sugar Rush Co. , shop, product, cart drawer, checkout, confirm, about, contact
 const { useState: usePState, useMemo: usePMemo, useEffect: usePEffect, useRef: usePRef } = React;
 
 /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Shop page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
@@ -111,7 +111,7 @@ function CartDrawer({ open, cart, setQty, remove, subtotal, onClose, onCheckout 
   );
 }
 
-/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Checkout — uses Stripe Payment Link (no backend needed) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
+/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Checkout , uses Stripe Payment Link (no backend needed) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 const CO_FIELDS = [
   { id:"name",    label:"Full name", full:false, ph:"Your name" },
   { id:"email",   label:"Email",     full:false, ph:"you@email.com" },
@@ -154,7 +154,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     localStorage.setItem("sugarrush.pending_order", JSON.stringify({ cart, form, total, orderNo }));
 
     if (paymentLinkReady) {
-      // Build Payment Link URL — pre-fills amount + email on Stripe's page
+      // Build Payment Link URL , pre-fills amount + email on Stripe's page
       const url = new URL(window.STRIPE_PAYMENT_LINK);
       url.searchParams.set("prefilled_amount", Math.round(total * 100));
       url.searchParams.set("prefilled_email",  form.email);
@@ -162,7 +162,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
       // Set this in your Stripe Payment Link settings ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ After payment ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Redirect to URL
       window.location.href = url.toString();
     } else {
-      // Demo mode — no Payment Link configured yet
+      // Demo mode , no Payment Link configured yet
       onPlaced();
     }
   };
@@ -204,8 +204,8 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
             </button>
             <p style={{ font:"italic 600 12.5px var(--font-italic)", opacity:0.6, textAlign:"center", marginTop:8 }}>
               {paymentLinkReady
-                ? "You'll be taken to Stripe's secure checkout — then brought right back."
-                : "(demo mode — no card charged)"}
+                ? "You'll be taken to Stripe's secure checkout , then brought right back."
+                : "(demo mode , no card charged)"}
             </p>
           </div>
         </div>
@@ -250,7 +250,7 @@ function ConfirmPage({ go }) {
     if (!window.emailjs) return;
     if (!window.EMAILJS_SERVICE_ID || window.EMAILJS_SERVICE_ID.includes("YOUR_")) return;
     if (!order.form || !order.form.email) return;
-    const itemList = items.map((l) => `${l.product.name} x${l.qty} — $${l.product.price * l.qty}`).join("\n");
+    const itemList = items.map((l) => `${l.product.name} x${l.qty} , $${l.product.price * l.qty}`).join("\n");
     window.emailjs.send(window.EMAILJS_SERVICE_ID, window.EMAILJS_TEMPLATE_ID, {
       to_name:    order.form.name,
       to_email:   order.form.email,
@@ -265,7 +265,7 @@ function ConfirmPage({ go }) {
     <div className="confirm-wrap" data-screen-label="Order confirmed">
       <div className="confirm">
         <CherryIcon size={46} />
-        <h1 className="confirm-h">Order confirmed — sweet!!</h1>
+        <h1 className="confirm-h">Order confirmed , sweet!!</h1>
         <div className="confirm-no">order no. {orderNo}</div>
         {items.length > 0 && (
           <div className="confirm-items">
@@ -345,7 +345,7 @@ function ContactPage({ go }) {
         <SectionHead title="Say hi!" />
         <p className="contact-intro">
           Questions about an order? Want to stock Sugar Rush Co. in your store? Just want to say hi?
-          We'd love to hear from you — we try to reply within 24 hours.
+          We'd love to hear from you , we try to reply within 24 hours.
         </p>
         <div className="contact-form">
           <div className="field">
@@ -392,7 +392,7 @@ function TermsPage({ go }) {
         <p>By placing an order with THINK BUDGET CO, LLC ("we", "us", "our"), you agree to these terms. Please read them carefully before purchasing.</p>
 
         <h2>2. Products</h2>
-        <p>All products are small-batch and handmade. Product descriptions, images, and scents are as accurate as possible, but slight variations may occur. Our lip glosses, body butters, and perfumes are cosmetic products intended for external use only. Slimes and squishies are not intended for consumption — keep away from young children.</p>
+        <p>All products are small-batch and handmade. Product descriptions, images, and scents are as accurate as possible, but slight variations may occur. Our lip glosses, body butters, and perfumes are cosmetic products intended for external use only. Slimes and squishies are not intended for consumption , keep away from young children.</p>
 
         <h2>3. Orders & Payment</h2>
         <p>All orders are processed through Stripe, a secure third-party payment processor. We do not store your card details. Prices are listed in USD and are subject to change without notice. We reserve the right to cancel any order for any reason, with a full refund issued.</p>
@@ -435,7 +435,7 @@ function RefundPage({ go }) {
         <p>We want you to love every single thing you get from Sugar Rush Co. If something isn't right, we'll make it right.</p>
 
         <h2>Returns & Exchanges</h2>
-        <p>Due to the handmade and personal-care nature of our products, we do not accept returns on opened items. However, if your order arrives damaged, defective, or incorrect, we will gladly send a replacement or issue a full refund — no questions asked.</p>
+        <p>Due to the handmade and personal-care nature of our products, we do not accept returns on opened items. However, if your order arrives damaged, defective, or incorrect, we will gladly send a replacement or issue a full refund , no questions asked.</p>
 
         <h2>How to Request a Refund</h2>
         <p>Contact us within <strong>7 days</strong> of receiving your order. Include your order number and a photo of the issue. We will respond within 24-48 hours with a resolution.</p>
@@ -450,7 +450,7 @@ function RefundPage({ go }) {
         <p>Approved refunds are processed within 3-5 business days back to your original payment method.</p>
 
         <h2>Questions?</h2>
-        <p><button className="legal-link" onClick={() => go("contact")}>Reach out to us</button> — we are always happy to help.</p>
+        <p><button className="legal-link" onClick={() => go("contact")}>Reach out to us</button> , we are always happy to help.</p>
 
         <div className="btn-row" style={{ justifyContent: "flex-start", marginTop: 32 }}>
           <button className="btn btn--ghost btn--sm" onClick={() => go("home")}>Back to shop</button>
@@ -763,7 +763,7 @@ function AdminPage({ go }) {
       {!loading && orders.length === 0 && (
         <div style={{ textAlign:"center", opacity:.55, padding:"60px 0" }}>
           <CherryIcon size={40} />
-          <p style={{ marginTop:14 }}>No orders yet — they'll show up here once Stripe payments come in.</p>
+          <p style={{ marginTop:14 }}>No orders yet, they'll show up here once Stripe payments come in.</p>
         </div>
       )}
 
