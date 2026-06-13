@@ -61,6 +61,32 @@ function loadJSON(key, fallback) {
 
 function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const [productsLoaded, setProductsLoaded] = useAState(false);
+
+  // Load products from server on startup, fall back to hardcoded data.js
+  useAEffect(() => {
+    fetch((window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com") + "/products")
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data) && data.length > 0) {
+          // Convert server products to match SHOP_DATA format
+          SHOP_DATA.products = data.map((p) => ({
+            id:    String(p.id),
+            cat:   p.cat,
+            name:  p.name,
+            price: Number(p.price),
+            stock: p.stock || 0,
+            blurb: p.blurb || "",
+            notes: (p.notes || "").split(",").map((n) => n.trim()).filter(Boolean),
+            image_url: p.image_url || ""
+          }));
+          // Update featured to use first 4 product ids
+          SHOP_DATA.featured = SHOP_DATA.products.slice(0, 4).map((p) => p.id);
+        }
+        setProductsLoaded(true);
+      })
+      .catch(() => setProductsLoaded(true)); // on error use hardcoded fallback
+  }, []);
 
   const initialRoute = React.useMemo(() => {
     const params = new URLSearchParams(window.location.search);
