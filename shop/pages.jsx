@@ -345,7 +345,7 @@ function ContactPage({ go }) {
         <SectionHead title="Say hi!" />
         <p className="contact-intro">
           Questions about an order? Want to stock Sugar Rush Co. in your store? Just want to say hi?
-          We'd love to hear from you ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â we try to reply within 24 hours.
+          We’d love to hear from you — we try to reply within 24 hours.
         </p>
         <div className="contact-form">
           <div className="field">
