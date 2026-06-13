@@ -15,7 +15,8 @@ const SHOP_NAME     = "Sugar Rush Co.";
 // ── CORS: allow your GitHub Pages domain ──────────────────────────────────────
 app.use(cors({
   origin: [
-    "https://sugarrushco.com",
+    "https://sugarrushco.shop",
+    "https://www.sugarrushco.shop",
     "http://localhost:3000",
     /\.github\.io$/
   ]

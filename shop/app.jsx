@@ -19,7 +19,7 @@ const EMAILJS_PUBLIC_KEY  = "YOUR_PUBLIC_KEY";
 // 3. Your contact email
 const CONTACT_EMAIL = "info@sugarrushco.shop";
 // 4. Your Render server URL (fill in after deploying to Render)
-const ADMIN_SERVER_URL = "https://sugarrush-server.onrender.com";
+const ADMIN_SERVER_URL = "https://sugarrushco.onrender.com";
 // 5. Social handles (leave blank to hide)
 const SOCIAL = {
   instagram: "sugarrushco",
