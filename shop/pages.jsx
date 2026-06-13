@@ -1,4 +1,4 @@
-// Sugar Rush Co. , shop, product, cart drawer, checkout, confirm, about, contact
+// Sugar Rush Co. shop, product, cart drawer, checkout, confirm, about, contact
 const { useState: usePState, useMemo: usePMemo, useEffect: usePEffect, useRef: usePRef } = React;
 
 /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Shop page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
