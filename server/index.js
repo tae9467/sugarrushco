@@ -12,7 +12,7 @@ const ADMIN_SECRET  = process.env.ADMIN_SECRET || "sugarrush2026";
 const FROM_EMAIL    = process.env.FROM_EMAIL    || "info@sugarrushco.shop";
 const SHOP_NAME     = "Sugar Rush Co.";
 
-// ── CORS: allow your GitHub Pages domain ──────────────────────────────────────
+// ── CORS ──────────────────────────────────────────────────────────────────────
 app.use(cors({
   origin: [
     "https://sugarrushco.shop",
@@ -22,7 +22,7 @@ app.use(cors({
   ]
 }));
 
-// ── Stripe webhook needs raw body for signature verification ──────────────────
+// ── Stripe webhook (raw body required) ───────────────────────────────────────
 app.post("/webhook", express.raw({ type: "application/json" }), async (req, res) => {
   const sig = req.headers["stripe-signature"];
   let event;
@@ -34,40 +34,62 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
   }
 
   if (event.type === "payment_intent.succeeded") {
-    const pi = event.data.object;
-
-    // Pull the order data Stripe stored in metadata (we'll set this on checkout)
+    const pi   = event.data.object;
     const meta = pi.metadata || {};
     const orderNo = meta.order_no || ("SR-" + Date.now());
 
-    const { error } = await sb.from("orders").insert({
-      order_no:           orderNo,
-      customer_name:      meta.customer_name  || "",
-      customer_email:     meta.customer_email || "",
-      customer_address:   meta.customer_address || "",
-      items:              meta.items           || "",
-      total:              pi.amount / 100,
-      stripe_payment_id:  pi.id,
-      status:             "paid"
-    });
+    // Decrement stock for each item ordered
+    if (meta.items) {
+      try {
+        const items = JSON.parse(meta.items_json || "[]");
+        for (const item of items) {
+          const { data: prod } = await sb.from("products").select("stock").eq("id", item.id).single();
+          if (prod) {
+            const newStock = Math.max(0, (prod.stock || 0) - (item.qty || 1));
+            await sb.from("products").update({ stock: newStock }).eq("id", item.id);
+          }
+        }
+      } catch(e) { console.error("Stock decrement error:", e.message); }
+    }
 
+    const { error } = await sb.from("orders").insert({
+      order_no:          orderNo,
+      customer_name:     meta.customer_name  || "",
+      customer_email:    meta.customer_email || "",
+      customer_address:  meta.customer_address || "",
+      items:             meta.items           || "",
+      total:             pi.amount / 100,
+      stripe_payment_id: pi.id,
+      status:            "paid"
+    });
     if (error) console.error("Supabase insert error:", error.message);
   }
 
   res.json({ received: true });
 });
 
-// ── All other routes get JSON body parsing ────────────────────────────────────
+// ── JSON body for all other routes ───────────────────────────────────────────
 app.use(express.json());
 
-// ── Simple admin auth middleware ──────────────────────────────────────────────
+// ── Admin auth middleware ─────────────────────────────────────────────────────
 function adminAuth(req, res, next) {
   const token = req.headers["x-admin-secret"];
   if (token !== ADMIN_SECRET) return res.status(401).json({ error: "Unauthorized" });
   next();
 }
 
-// ── GET /orders — list all orders newest first ────────────────────────────────
+// ── PUBLIC: GET /products ─────────────────────────────────────────────────────
+app.get("/products", async (req, res) => {
+  const { data, error } = await sb
+    .from("products")
+    .select("*")
+    .eq("active", true)
+    .order("created_at", { ascending: true });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ── ADMIN: GET /orders ────────────────────────────────────────────────────────
 app.get("/orders", adminAuth, async (req, res) => {
   const { data, error } = await sb
     .from("orders")
@@ -77,33 +99,59 @@ app.get("/orders", adminAuth, async (req, res) => {
   res.json(data);
 });
 
-// ── POST /track — save tracking number and email the customer ─────────────────
+// ── ADMIN: POST /admin/products — create product ──────────────────────────────
+app.post("/admin/products", adminAuth, async (req, res) => {
+  const { name, price, cat, blurb, notes, stock, image_url } = req.body;
+  if (!name || !price || !cat) return res.status(400).json({ error: "name, price, cat required" });
+  const { data, error } = await sb.from("products").insert({
+    name, price: parseFloat(price), cat,
+    blurb: blurb || "",
+    notes: notes || "",
+    stock: parseInt(stock) || 0,
+    image_url: image_url || "",
+    active: true
+  }).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ── ADMIN: PUT /admin/products/:id — update product ───────────────────────────
+app.put("/admin/products/:id", adminAuth, async (req, res) => {
+  const { name, price, cat, blurb, notes, stock, image_url, active } = req.body;
+  const updates = {};
+  if (name      !== undefined) updates.name      = name;
+  if (price     !== undefined) updates.price     = parseFloat(price);
+  if (cat       !== undefined) updates.cat       = cat;
+  if (blurb     !== undefined) updates.blurb     = blurb;
+  if (notes     !== undefined) updates.notes     = notes;
+  if (stock     !== undefined) updates.stock     = parseInt(stock);
+  if (image_url !== undefined) updates.image_url = image_url;
+  if (active    !== undefined) updates.active    = active;
+
+  const { data, error } = await sb.from("products").update(updates).eq("id", req.params.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ── ADMIN: DELETE /admin/products/:id ────────────────────────────────────────
+app.delete("/admin/products/:id", adminAuth, async (req, res) => {
+  const { error } = await sb.from("products").update({ active: false }).eq("id", req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// ── ADMIN: POST /track — save tracking + email customer ──────────────────────
 app.post("/track", adminAuth, async (req, res) => {
   const { order_id, tracking_number } = req.body;
-  if (!order_id || !tracking_number) {
-    return res.status(400).json({ error: "order_id and tracking_number required" });
-  }
+  if (!order_id || !tracking_number) return res.status(400).json({ error: "order_id and tracking_number required" });
 
-  // Fetch the order
-  const { data: orders, error: fetchErr } = await sb
-    .from("orders")
-    .select("*")
-    .eq("id", order_id)
-    .limit(1);
-
-  if (fetchErr || !orders || orders.length === 0) {
-    return res.status(404).json({ error: "Order not found" });
-  }
+  const { data: orders, error: fetchErr } = await sb.from("orders").select("*").eq("id", order_id).limit(1);
+  if (fetchErr || !orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
   const order = orders[0];
 
-  // Save tracking number
-  const { error: updateErr } = await sb
-    .from("orders")
-    .update({ tracking_number, tracking_sent: true, status: "shipped" })
-    .eq("id", order_id);
+  const { error: updateErr } = await sb.from("orders").update({ tracking_number, tracking_sent: true, status: "shipped" }).eq("id", order_id);
   if (updateErr) return res.status(500).json({ error: updateErr.message });
 
-  // Send email to customer
   const uspsUrl = `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking_number}`;
   const { error: emailErr } = await mail.emails.send({
     from: `${SHOP_NAME} <${FROM_EMAIL}>`,
@@ -115,39 +163,27 @@ app.post("/track", adminAuth, async (req, res) => {
         <div style="border:3px solid #29261b;border-top:none;border-radius:0 0 16px 16px;padding:36px 40px;">
           <h1 style="font-size:28px;margin:0 0 8px;">Your order shipped! 🍒</h1>
           <p style="margin:0 0 24px;font-size:16px;">Hi ${order.customer_name}, your goodies are on their way!</p>
-
           <div style="background:#f8f4ff;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
             <p style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;opacity:.6;">Order</p>
             <p style="margin:0 0 16px;font-weight:700;font-size:18px;">${order.order_no}</p>
             <p style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;opacity:.6;">USPS Tracking Number</p>
             <p style="margin:0;font-weight:700;font-size:20px;letter-spacing:.05em;">${tracking_number}</p>
           </div>
-
-          <a href="${uspsUrl}"
-             style="display:block;text-align:center;background:#29261b;color:#fff;text-decoration:none;
-                    padding:14px 28px;border-radius:99px;font-size:15px;font-weight:700;margin-bottom:24px;">
+          <a href="${uspsUrl}" style="display:block;text-align:center;background:#29261b;color:#fff;text-decoration:none;padding:14px 28px;border-radius:99px;font-size:15px;font-weight:700;margin-bottom:24px;">
             Track my package →
           </a>
-
-          <p style="font-size:13px;opacity:.6;margin:0;">
-            Questions? Reply to this email or visit our site.<br>
-            Thank you for supporting ${SHOP_NAME}! 🎀
-          </p>
+          <p style="font-size:13px;opacity:.6;margin:0;">Questions? Reply to this email or visit our site.<br>Thank you for supporting ${SHOP_NAME}! 🎀</p>
         </div>
       </div>
     `
   });
 
-  if (emailErr) {
-    console.error("Resend error:", emailErr);
-    return res.status(500).json({ error: "Tracking saved but email failed: " + emailErr.message });
-  }
-
+  if (emailErr) return res.status(500).json({ error: "Tracking saved but email failed: " + emailErr.message });
   res.json({ ok: true, message: "Tracking saved and email sent!" });
 });
 
 // ── Health check ──────────────────────────────────────────────────────────────
-app.get("/", (req, res) => res.json({ status: "Sugar Rush server running" }));
+app.get("/", (req, res) => res.json({ status: "Sugar Rush server running 🍒" }));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

@@ -266,14 +266,14 @@ function getStock(productId) {
 function ProductCard({ p, go, onAdd, showBlurb }) {
   const stock = getStock(p.id);
   const outOfStock = stock === 0;
-  const lowStock = stock > 0 && stock <= 3;
+  const lowStock = stock > 0 && stock <= 10;
 
   return (
     <article className={"pcard" + (outOfStock ? " pcard--oos" : "")} onClick={() => !outOfStock && go("product", { id: p.id })}>
       <div className="pcard-img-wrap">
         <ProductImage product={p} />
         {outOfStock && <div className="oos-badge">Out of Stock</div>}
-        {lowStock && <div className="low-badge">Only {stock} left!</div>}
+        {lowStock && <div className="low-badge">⚠️ Almost sold out! Only {stock} left!</div>}
       </div>
       <div className="pcard-body">
         <div className="pcard-meta">{catById(p.cat).label} - ${p.price}</div>

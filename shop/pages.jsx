@@ -461,12 +461,202 @@ function RefundPage({ go }) {
 }
 
 /* ── Admin page ── */
-const SERVER_URL = window.ADMIN_SERVER_URL || "https://sugarrush-server.onrender.com";
+const SERVER_URL = window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com";
+
+const CARD_STYLE = {
+  border:"3px solid var(--ink)", borderRadius:16, padding:"22px 26px",
+  marginBottom:18, background:"var(--tld-white)", boxShadow:"var(--tld-shadow)"
+};
+
+/* ── Products Tab ── */
+const CAT_OPTIONS = [
+  { id:"lipgloss",    label:"Lip Gloss"   },
+  { id:"candles",     label:"Candles"     },
+  { id:"squishies",   label:"Squishies"   },
+  { id:"body-butter", label:"Body Butter" },
+  { id:"perfume",     label:"Perfume"     }
+];
+
+const EMPTY_FORM = { name:"", price:"", cat:"lipgloss", blurb:"", notes:"", stock:"", image_url:"" };
+
+function ProductsTab({ secret }) {
+  const [products, setProducts] = usePState([]);
+  const [loading,  setLoading]  = usePState(false);
+  const [err,      setErr]      = usePState("");
+  const [form,     setForm]     = usePState(EMPTY_FORM);
+  const [editing,  setEditing]  = usePState(null); // product id being edited
+  const [saving,   setSaving]   = usePState(false);
+  const [stockEdit,setStockEdit]= usePState({}); // { id: newStockValue }
+
+  usePEffect(() => { fetchProducts(); }, []);
+
+  const fetchProducts = async () => {
+    setLoading(true); setErr("");
+    try {
+      const res  = await fetch(SERVER_URL + "/products");
+      const data = await res.json();
+      setProducts(Array.isArray(data) ? data : []);
+    } catch(e) { setErr("Could not load products"); }
+    setLoading(false);
+  };
+
+  const saveProduct = async () => {
+    if (!form.name || !form.price || !form.cat) { setErr("Name, price and category are required"); return; }
+    setSaving(true); setErr("");
+    try {
+      const url    = editing ? `${SERVER_URL}/admin/products/${editing}` : `${SERVER_URL}/admin/products`;
+      const method = editing ? "PUT" : "POST";
+      const res    = await fetch(url, {
+        method, headers:{ "Content-Type":"application/json", "x-admin-secret": secret },
+        body: JSON.stringify(form)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setForm(EMPTY_FORM); setEditing(null);
+      fetchProducts();
+    } catch(e) { setErr(e.message); }
+    setSaving(false);
+  };
+
+  const deleteProduct = async (id) => {
+    if (!window.confirm("Hide this product from the shop?")) return;
+    await fetch(`${SERVER_URL}/admin/products/${id}`, {
+      method:"DELETE", headers:{ "x-admin-secret": secret }
+    });
+    fetchProducts();
+  };
+
+  const startEdit = (p) => {
+    setEditing(p.id);
+    setForm({ name:p.name, price:String(p.price), cat:p.cat, blurb:p.blurb||"", notes:p.notes||"", stock:String(p.stock||0), image_url:p.image_url||"" });
+    window.scrollTo({ top: 0, behavior:"smooth" });
+  };
+
+  const updateStock = async (p) => {
+    const newStock = parseInt(stockEdit[p.id]);
+    if (isNaN(newStock) || newStock < 0) return;
+    await fetch(`${SERVER_URL}/admin/products/${p.id}`, {
+      method:"PUT", headers:{ "Content-Type":"application/json", "x-admin-secret": secret },
+      body: JSON.stringify({ stock: newStock })
+    });
+    setStockEdit((s) => { const n = {...s}; delete n[p.id]; return n; });
+    fetchProducts();
+  };
+
+  const fieldStyle = { display:"flex", flexDirection:"column", gap:4 };
+  const labelStyle = { font:"700 12px var(--font-ui)", textTransform:"uppercase", letterSpacing:".05em", opacity:.7 };
+
+  return (
+    <div>
+      {/* ── Add / Edit form ── */}
+      <div style={CARD_STYLE}>
+        <h3 style={{ margin:"0 0 18px", fontFamily:"var(--disp)", fontSize:20 }}>
+          {editing ? "✏️ Edit Product" : "➕ Add New Product"}
+        </h3>
+        {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:8, padding:"10px 14px", marginBottom:14, color:"#900", fontSize:14 }}>{err}</div>}
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Product name *</label>
+            <input className="input" placeholder="Strawberry Shortcake Gloss" value={form.name}
+              onChange={(e) => setForm({...form, name:e.target.value})} />
+          </div>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Price ($) *</label>
+            <input className="input" type="number" min="0" step="0.01" placeholder="8.00" value={form.price}
+              onChange={(e) => setForm({...form, price:e.target.value})} />
+          </div>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Category *</label>
+            <select className="input" value={form.cat} onChange={(e) => setForm({...form, cat:e.target.value})}>
+              {CAT_OPTIONS.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+          </div>
+          <div style={fieldStyle}>
+            <label style={labelStyle}>Stock quantity</label>
+            <input className="input" type="number" min="0" placeholder="10" value={form.stock}
+              onChange={(e) => setForm({...form, stock:e.target.value})} />
+          </div>
+          <div style={{ ...fieldStyle, gridColumn:"1/-1" }}>
+            <label style={labelStyle}>Short description</label>
+            <input className="input" placeholder="High-shine, non-sticky, and it smells exactly like the dessert." value={form.blurb}
+              onChange={(e) => setForm({...form, blurb:e.target.value})} />
+          </div>
+          <div style={{ ...fieldStyle, gridColumn:"1/-1" }}>
+            <label style={labelStyle}>Notes / scent notes (comma separated)</label>
+            <input className="input" placeholder="strawberry, whipped cream, vanilla sponge" value={form.notes}
+              onChange={(e) => setForm({...form, notes:e.target.value})} />
+          </div>
+          <div style={{ ...fieldStyle, gridColumn:"1/-1" }}>
+            <label style={labelStyle}>Product image URL (paste a link to your product photo)</label>
+            <input className="input" placeholder="https://..." value={form.image_url}
+              onChange={(e) => setForm({...form, image_url:e.target.value})} />
+            {form.image_url && <img src={form.image_url} alt="preview" style={{ marginTop:8, height:80, objectFit:"cover", borderRadius:8 }} />}
+          </div>
+        </div>
+        <div style={{ display:"flex", gap:10, marginTop:18 }}>
+          <button className="btn" onClick={saveProduct} disabled={saving}>
+            {saving ? "Saving…" : editing ? "Save changes" : "Add product"}
+          </button>
+          {editing && (
+            <button className="btn btn--ghost" onClick={() => { setEditing(null); setForm(EMPTY_FORM); setErr(""); }}>
+              Cancel
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Product list ── */}
+      <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"28px 0 14px" }}>All Products ({products.length})</h3>
+      {loading && <p style={{ opacity:.6 }}>Loading…</p>}
+      {products.map((p) => {
+        const isOos  = p.stock === 0;
+        const isLow  = p.stock > 0 && p.stock <= 10;
+        return (
+          <div key={p.id} style={{ ...CARD_STYLE, opacity: isOos ? .75 : 1 }}>
+            <div style={{ display:"flex", gap:14, alignItems:"flex-start", flexWrap:"wrap" }}>
+              {p.image_url && <img src={p.image_url} alt={p.name} style={{ width:70, height:70, objectFit:"cover", borderRadius:10, border:"2px solid var(--ink)", flexShrink:0 }} />}
+              <div style={{ flex:1, minWidth:200 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
+                  <strong style={{ fontSize:17 }}>{p.name}</strong>
+                  <span style={{ fontSize:13, fontWeight:700, padding:"2px 10px", borderRadius:99,
+                    background: isOos ? "#ffd0d0" : isLow ? "#fff3cd" : "#d4f7d4",
+                    color:      isOos ? "#900"    : isLow ? "#7a5800" : "#1a6b1a" }}>
+                    {isOos ? "Out of Stock" : isLow ? `⚠️ Only ${p.stock} left!` : `✓ ${p.stock} in stock`}
+                  </span>
+                  <span style={{ fontSize:13, opacity:.6 }}>${Number(p.price).toFixed(2)} · {CAT_OPTIONS.find(c=>c.id===p.cat)?.label}</span>
+                </div>
+                <p style={{ margin:"0 0 10px", fontSize:13, opacity:.7 }}>{p.blurb}</p>
+                {/* Quick stock editor */}
+                <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                  <span style={{ fontSize:13, fontWeight:700 }}>Update stock:</span>
+                  <input className="input" type="number" min="0"
+                    style={{ width:80, padding:"6px 10px", fontSize:14 }}
+                    placeholder={String(p.stock || 0)}
+                    value={stockEdit[p.id] !== undefined ? stockEdit[p.id] : ""}
+                    onChange={(e) => setStockEdit((s) => ({...s, [p.id]: e.target.value}))} />
+                  <button className="btn btn--sm" onClick={() => updateStock(p)}
+                    disabled={stockEdit[p.id] === undefined || stockEdit[p.id] === ""}>
+                    Save stock
+                  </button>
+                </div>
+              </div>
+              <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+                <button className="btn btn--sm btn--ghost" onClick={() => startEdit(p)}>Edit</button>
+                <button className="btn btn--sm" style={{ background:"#c00", borderColor:"#c00" }} onClick={() => deleteProduct(p.id)}>Hide</button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function AdminPage({ go }) {
   const [authed,   setAuthed]   = usePState(false);
   const [password, setPassword] = usePState("");
   const [secret,   setSecret]   = usePState("");
+  const [tab,      setTab]      = usePState("orders");
   const [orders,   setOrders]   = usePState([]);
   const [loading,  setLoading]  = usePState(false);
   const [err,      setErr]      = usePState("");
@@ -543,14 +733,29 @@ function AdminPage({ go }) {
 
   return (
     <div className="rail sec" data-screen-label="Admin">
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 28, flexWrap:"wrap", gap: 12 }}>
-        <h1 style={{ margin:0, fontFamily:"var(--disp)", fontSize:"clamp(24px,4vw,36px)" }}>Order Dashboard</h1>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 20, flexWrap:"wrap", gap: 12 }}>
+        <h1 style={{ margin:0, fontFamily:"var(--disp)", fontSize:"clamp(24px,4vw,36px)" }}>Admin Dashboard</h1>
         <div style={{ display:"flex", gap: 10 }}>
-          <button className="btn btn--sm" onClick={() => fetchOrders()}>Refresh</button>
+          <button className="btn btn--sm" onClick={() => tab === "orders" ? fetchOrders() : null}>Refresh</button>
           <button className="btn btn--ghost btn--sm" onClick={() => go("home")}>Back to shop</button>
         </div>
       </div>
 
+      {/* Tabs */}
+      <div style={{ display:"flex", gap:0, marginBottom:28, borderBottom:"3px solid var(--ink)" }}>
+        {[["orders","📦 Orders"],["products","🛍️ Products"]].map(([id,label]) => (
+          <button key={id} onClick={() => setTab(id)} style={{
+            padding:"10px 24px", fontFamily:"var(--font-ui)", fontWeight:700, fontSize:15,
+            border:"none", borderBottom: tab===id ? "3px solid var(--acc2)" : "3px solid transparent",
+            background:"none", cursor:"pointer", color: tab===id ? "var(--ink)" : "rgba(0,0,0,.45)",
+            marginBottom:"-3px"
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {tab === "products" && <ProductsTab secret={secret} />}
+
+      {tab === "orders" && (<React.Fragment>
       {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:10, padding:"12px 16px", marginBottom:20, color:"#900" }}>{err}</div>}
 
       {loading && <p style={{ textAlign:"center", opacity:.6 }}>Loading orders...</p>}
@@ -612,6 +817,7 @@ function AdminPage({ go }) {
           </div>
         );
       })}
+      </React.Fragment>)}
     </div>
   );
 }
