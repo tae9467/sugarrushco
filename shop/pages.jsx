@@ -179,7 +179,8 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     const streetNum  = a.house_number || "";
     const streetName = a.road || a.street || "";
     const street     = [streetNum, streetName].filter(Boolean).join(" ");
-    const city       = a.city || a.town || a.village || a.county || "";
+    const rawCity    = a.city || a.town || a.village || a.county || "";
+    const city       = rawCity.replace(/^City of /i, "").replace(/^Town of /i, "").trim();
     const zip        = a.postcode ? a.postcode.slice(0, 5) : "";
     const state      = a.state || "";
     setForm((f) => ({ ...f, address: street, city, zip, state }));
