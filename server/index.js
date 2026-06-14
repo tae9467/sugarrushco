@@ -92,8 +92,8 @@ app.post("/create-checkout", async (req, res) => {
   if (!cart || !cart.length) return res.status(400).json({ error: "cart required" });
   try {
     // Look up real prices from Supabase — never trust client-sent prices
-    const ids = cart.map((i) => i.id);
-    const { data: products, error: dbErr } = await sb.from("products").select("id, name, price").in("id", ids);
+    const ids = [...new Set(cart.map((i) => i.id))]; // dedupe IDs
+    const { data: products, error: dbErr } = await sb.from("products").select("id, name, price").in("id", ids).eq("active", true);
     if (dbErr) throw new Error("Could not verify product prices");
 
     const productMap = {};
@@ -105,8 +105,8 @@ app.post("/create-checkout", async (req, res) => {
 
     for (const item of cart) {
       const p = productMap[item.id];
-      if (!p) return res.status(400).json({ error: `Product ${item.id} not found` });
-      const qty = Math.max(1, Math.round(item.qty));
+      if (!p) return res.status(400).json({ error: `Product not found or unavailable` });
+      const qty = Math.min(99, Math.max(1, Math.round(item.qty)));
       subtotal += p.price * qty;
       itemLabels.push(`${p.name} x${qty}`);
       line_items.push({
