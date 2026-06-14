@@ -8,7 +8,7 @@ function ComingSoonBanner() {
       textAlign: "center", padding: "80px 24px",
       display: "flex", flexDirection: "column", alignItems: "center", gap: 16
     }}>
-      <div style={{ fontSize: 52 }}>🍒</div>
+      <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." style={{ height: 90, objectFit: "contain" }} />
       <h2 style={{ fontFamily: "var(--disp)", fontSize: "clamp(26px,4vw,38px)", margin: 0 }}>
         We're all stocked out!
       </h2>
@@ -17,7 +17,7 @@ function ComingSoonBanner() {
         New goodies drop <strong>every other Friday</strong>, so check back soon. 🎀
       </p>
       <p style={{ fontSize: 14, opacity: .5, margin: 0 }}>
-        Follow us on Instagram <strong>@sugarrushco</strong> so you never miss a drop!
+        Follow us on Instagram <strong>@sugarrushco.shop</strong> so you never miss a drop!
       </p>
     </div>
   );
