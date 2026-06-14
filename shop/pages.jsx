@@ -1969,22 +1969,37 @@ function ProductReviews({ productId }) {
 /* ── Cookie consent banner ── */
 function CookieBanner() {
   const [hidden, setHidden] = usePState(() => {
-    try { return localStorage.getItem("sr.cookies") === "1"; } catch { return false; }
+    try { return !!localStorage.getItem("sr.cookies"); } catch { return false; }
   });
   if (hidden) return null;
-  const accept = () => { try { localStorage.setItem("sr.cookies", "1"); } catch {} setHidden(true); };
+  const accept  = () => { try { localStorage.setItem("sr.cookies", "yes"); } catch {} setHidden(true); };
+  const decline = () => { try { localStorage.setItem("sr.cookies", "no");  } catch {} setHidden(true); };
   return (
     <div style={{
-      position:"fixed", bottom:0, left:0, right:0, zIndex:10000,
+      position:"fixed", bottom:16, left:"50%", transform:"translateX(-50%)",
+      zIndex:10000, width:"calc(100% - 32px)", maxWidth:620,
       background:"var(--ink)", color:"var(--tld-white)",
-      padding:"14px 24px", display:"flex", alignItems:"center", justifyContent:"space-between",
-      gap:16, flexWrap:"wrap", fontSize:13
+      padding:"14px 18px", borderRadius:12,
+      display:"flex", alignItems:"center", justifyContent:"space-between",
+      gap:12, flexWrap:"wrap", fontSize:13,
+      boxShadow:"0 4px 24px rgba(0,0,0,.3)",
+      pointerEvents:"auto"
     }}>
-      <p style={{ margin:0, lineHeight:1.5 }}>
-        🍪 We use cookies to keep your cart and remember your preferences. By continuing to browse you agree to our{" "}
-        <button onClick={() => {}} style={{ color:"var(--acc3)", background:"none", border:"none", cursor:"pointer", fontSize:13, textDecoration:"underline", padding:0 }}>cookie use</button>.
+      <p style={{ margin:0, lineHeight:1.5, flex:1, minWidth:200 }}>
+        🍪 We use cookies to keep your cart and preferences. Essential cookies only — no tracking.
       </p>
-      <button className="btn btn--sm" onClick={accept} style={{ flexShrink:0, background:"var(--acc)", borderColor:"var(--acc)", color:"var(--ink)" }}>Got it</button>
+      <div style={{ display:"flex", gap:8, flexShrink:0 }}>
+        <button onClick={decline} style={{
+          background:"transparent", border:"1.5px solid rgba(255,255,255,.35)",
+          color:"rgba(255,255,255,.75)", borderRadius:99, padding:"6px 14px",
+          fontSize:13, cursor:"pointer", fontWeight:600
+        }}>Decline</button>
+        <button onClick={accept} style={{
+          background:"var(--acc)", border:"1.5px solid var(--acc)",
+          color:"var(--ink)", borderRadius:99, padding:"6px 14px",
+          fontSize:13, cursor:"pointer", fontWeight:700
+        }}>Accept</button>
+      </div>
     </div>
   );
 }
