@@ -30,12 +30,44 @@ function ProductPage({ route, go, onAdd }) {
   const p     = productById(route.id) || SHOP_DATA.products[0];
   const [qty, setQty] = usePState(1);
   const pairs = SHOP_DATA.products.filter((x) => x.id !== p.id && x.cat === p.cat).slice(0, 2);
+
+  const images = usePMemo(() => {
+    let arr = [];
+    try { arr = JSON.parse(p.images || "[]"); } catch {}
+    if (!arr.length && p.image_url) arr = [p.image_url];
+    return arr;
+  }, [p.id]);
+  const [activeImg, setActiveImg] = usePState(0);
+  usePEffect(() => setActiveImg(0), [p.id]);
+  const bg = CAT_GRADIENTS[p.cat] || CAT_GRADIENTS.lipgloss;
+
   return (
     <div className="rail sec" data-screen-label={"Product · " + p.name}>
       <button className="crumb" onClick={() => go("shop", { cat: p.cat })}>← back to {catById(p.cat).label.toLowerCase()}</button>
       <div className="pp">
         <div className="pp-photo">
-          <ProductImage product={p} height={470} radius={20} />
+          {images.length > 0 ? (
+            <div>
+              <div style={{ height:470, borderRadius:20, overflow:"hidden", background:bg }}>
+                <img src={images[activeImg]} alt={p.name}
+                  style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+              </div>
+              {images.length > 1 && (
+                <div style={{ display:"flex", gap:8, marginTop:10, flexWrap:"wrap" }}>
+                  {images.map((src, i) => (
+                    <button key={i} onClick={() => setActiveImg(i)} style={{
+                      padding:0, border: i === activeImg ? "3px solid var(--ink)" : "2px solid transparent",
+                      borderRadius:8, cursor:"pointer", background:"none", flexShrink:0
+                    }}>
+                      <img src={src} alt="" style={{ width:56, height:56, objectFit:"cover", borderRadius:6, display:"block" }} />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <ProductImage product={p} height={470} radius={20} />
+          )}
         </div>
         <div>
           <div className="eyebrow">{catById(p.cat).label} - ${p.price}</div>
@@ -476,7 +508,82 @@ const CAT_OPTIONS = [
   { id:"perfume",     label:"Perfume"     }
 ];
 
-const EMPTY_FORM = { name:"", price:"", cat:"lipgloss", blurb:"", notes:"", stock:"", image_url:"" };
+const EMPTY_FORM = { name:"", price:"", cat:"lipgloss", blurb:"", notes:"", stock:"", images:[] };
+
+function ImageUploader({ images, onChange }) {
+  const [dragging, setDragging] = usePState(false);
+  const fileRef = usePRef(null);
+
+  const addFiles = (files) => {
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (e) => onChange((prev) => [...prev, e.target.result]);
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const onDrop = (e) => {
+    e.preventDefault(); setDragging(false);
+    addFiles(e.dataTransfer.files);
+  };
+
+  const setFeatured = (idx) => {
+    onChange([images[idx], ...images.filter((_, i) => i !== idx)]);
+  };
+
+  const removeImage = (idx) => {
+    onChange(images.filter((_, i) => i !== idx));
+  };
+
+  return (
+    <div>
+      <div
+        onClick={() => fileRef.current.click()}
+        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+        onDragLeave={() => setDragging(false)}
+        onDrop={onDrop}
+        style={{
+          border: `2px dashed ${dragging ? "var(--acc2)" : "var(--ink)"}`,
+          borderRadius: 12, padding: "22px 16px", textAlign: "center",
+          cursor: "pointer", background: dragging ? "rgba(0,0,0,.04)" : "transparent", transition: "all .15s"
+        }}
+      >
+        <div style={{ fontSize: 13, opacity: .7 }}>Drop images here or <strong>click to browse</strong></div>
+        <div style={{ fontSize: 11, opacity: .5, marginTop: 4 }}>First image = featured · add multiple</div>
+      </div>
+      <input ref={fileRef} type="file" accept="image/*" multiple style={{ display:"none" }}
+        onChange={(e) => addFiles(e.target.files)} />
+      {images.length > 0 && (
+        <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginTop:12 }}>
+          {images.map((src, i) => (
+            <div key={i} style={{ position:"relative" }}>
+              <img src={src} alt="" style={{
+                width:80, height:80, objectFit:"cover", borderRadius:8,
+                border: i === 0 ? "3px solid var(--acc2)" : "2px solid var(--ink)"
+              }} />
+              {i === 0 && (
+                <span style={{ position:"absolute", top:4, left:4, background:"var(--acc2)", color:"white",
+                  fontSize:9, fontWeight:700, padding:"2px 5px", borderRadius:4 }}>FEATURED</span>
+              )}
+              {i > 0 && (
+                <button onClick={() => setFeatured(i)} style={{
+                  position:"absolute", top:4, left:4, background:"rgba(0,0,0,.6)", color:"white",
+                  border:"none", borderRadius:4, fontSize:9, fontWeight:700, padding:"2px 5px", cursor:"pointer"
+                }}>SET MAIN</button>
+              )}
+              <button onClick={() => removeImage(i)} style={{
+                position:"absolute", top:4, right:4, background:"#c00", color:"white",
+                border:"none", borderRadius:"50%", width:18, height:18, fontSize:13,
+                cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", lineHeight:1
+              }}>×</button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function ProductsTab({ secret }) {
   const [products, setProducts] = usePState([]);
@@ -492,7 +599,9 @@ function ProductsTab({ secret }) {
   const fetchProducts = async () => {
     setLoading(true); setErr("");
     try {
-      const res  = await fetch(SERVER_URL + "/products");
+      const res  = await fetch(SERVER_URL + "/products?all=true", {
+        headers: { "x-admin-secret": secret }
+      });
       const data = await res.json();
       setProducts(Array.isArray(data) ? data : []);
     } catch(e) { setErr("Could not load products"); }
@@ -501,13 +610,16 @@ function ProductsTab({ secret }) {
 
   const saveProduct = async () => {
     if (!form.name || !form.price || !form.cat) { setErr("Name, price and category are required"); return; }
+    const dup = products.find((p) => p.name.trim().toLowerCase() === form.name.trim().toLowerCase() && p.id !== editing);
+    if (dup) { setErr(`"${dup.name}" already exists — edit that one instead of creating a duplicate.`); return; }
     setSaving(true); setErr("");
     try {
       const url    = editing ? `${SERVER_URL}/admin/products/${editing}` : `${SERVER_URL}/admin/products`;
       const method = editing ? "PUT" : "POST";
+      const body   = { ...form, image_url: form.images[0] || "", images: JSON.stringify(form.images) };
       const res    = await fetch(url, {
         method, headers:{ "Content-Type":"application/json", "x-admin-secret": secret },
-        body: JSON.stringify(form)
+        body: JSON.stringify(body)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
@@ -518,16 +630,26 @@ function ProductsTab({ secret }) {
   };
 
   const deleteProduct = async (id) => {
-    if (!window.confirm("Hide this product from the shop?")) return;
     await fetch(`${SERVER_URL}/admin/products/${id}`, {
       method:"DELETE", headers:{ "x-admin-secret": secret }
     });
     fetchProducts();
   };
 
+  const toggleHide = async (p) => {
+    await fetch(`${SERVER_URL}/admin/products/${p.id}`, {
+      method:"PUT", headers:{ "Content-Type":"application/json", "x-admin-secret": secret },
+      body: JSON.stringify({ active: p.active === false ? true : false })
+    });
+    fetchProducts();
+  };
+
   const startEdit = (p) => {
     setEditing(p.id);
-    setForm({ name:p.name, price:String(p.price), cat:p.cat, blurb:p.blurb||"", notes:p.notes||"", stock:String(p.stock||0), image_url:p.image_url||"" });
+    let images = [];
+    try { images = JSON.parse(p.images || "[]"); } catch {}
+    if (!images.length && p.image_url) images = [p.image_url];
+    setForm({ name:p.name, price:String(p.price), cat:p.cat, blurb:p.blurb||"", notes:p.notes||"", stock:String(p.stock||0), images });
     window.scrollTo({ top: 0, behavior:"smooth" });
   };
 
@@ -586,10 +708,8 @@ function ProductsTab({ secret }) {
               onChange={(e) => setForm({...form, notes:e.target.value})} />
           </div>
           <div style={{ ...fieldStyle, gridColumn:"1/-1" }}>
-            <label style={labelStyle}>Product image URL (paste a link to your product photo)</label>
-            <input className="input" placeholder="https://..." value={form.image_url}
-              onChange={(e) => setForm({...form, image_url:e.target.value})} />
-            {form.image_url && <img src={form.image_url} alt="preview" style={{ marginTop:8, height:80, objectFit:"cover", borderRadius:8 }} />}
+            <label style={labelStyle}>Product images (drag &amp; drop or click · first = featured)</label>
+            <ImageUploader images={form.images} onChange={(imgs) => setForm((f) => ({...f, images: typeof imgs === "function" ? imgs(f.images) : imgs}))} />
           </div>
         </div>
         <div style={{ display:"flex", gap:10, marginTop:18 }}>
@@ -605,48 +725,75 @@ function ProductsTab({ secret }) {
       </div>
 
       {/* ── Product list ── */}
-      <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"28px 0 14px" }}>All Products ({products.length})</h3>
-      {loading && <p style={{ opacity:.6 }}>Loading…</p>}
-      {products.map((p) => {
-        const isOos  = p.stock === 0;
-        const isLow  = p.stock > 0 && p.stock <= 10;
+      {(() => {
+        const visible = products.filter((p) => p.active !== false);
+        const hidden  = products.filter((p) => p.active === false);
         return (
-          <div key={p.id} style={{ ...CARD_STYLE, opacity: isOos ? .75 : 1 }}>
-            <div style={{ display:"flex", gap:14, alignItems:"flex-start", flexWrap:"wrap" }}>
-              {p.image_url && <img src={p.image_url} alt={p.name} style={{ width:70, height:70, objectFit:"cover", borderRadius:10, border:"2px solid var(--ink)", flexShrink:0 }} />}
-              <div style={{ flex:1, minWidth:200 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
-                  <strong style={{ fontSize:17 }}>{p.name}</strong>
-                  <span style={{ fontSize:13, fontWeight:700, padding:"2px 10px", borderRadius:99,
-                    background: isOos ? "#ffd0d0" : isLow ? "#fff3cd" : "#d4f7d4",
-                    color:      isOos ? "#900"    : isLow ? "#7a5800" : "#1a6b1a" }}>
-                    {isOos ? "Out of Stock" : isLow ? `⚠️ Only ${p.stock} left!` : `✓ ${p.stock} in stock`}
-                  </span>
-                  <span style={{ fontSize:13, opacity:.6 }}>${Number(p.price).toFixed(2)} · {CAT_OPTIONS.find(c=>c.id===p.cat)?.label}</span>
+          <React.Fragment>
+            <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"28px 0 14px" }}>
+              Active Products ({visible.length})
+            </h3>
+            {loading && <p style={{ opacity:.6 }}>Loading…</p>}
+            {[...visible, ...hidden].map((p) => {
+              const isHidden = p.active === false;
+              const isOos  = p.stock === 0;
+              const isLow  = p.stock > 0 && p.stock <= 10;
+              let thumb = p.image_url || "";
+              if (!thumb && p.images) { try { thumb = JSON.parse(p.images)[0] || ""; } catch {} }
+              return (
+                <div key={p.id} style={{ ...CARD_STYLE, opacity: isHidden ? .55 : isOos ? .8 : 1,
+                  borderColor: isHidden ? "#aaa" : "var(--ink)" }}>
+                  {isHidden && (
+                    <div style={{ background:"#f0f0f0", color:"#666", fontSize:11, fontWeight:700,
+                      textTransform:"uppercase", letterSpacing:".08em", padding:"3px 10px", borderRadius:6,
+                      display:"inline-block", marginBottom:10 }}>Hidden from shop</div>
+                  )}
+                  <div style={{ display:"flex", gap:14, alignItems:"flex-start", flexWrap:"wrap" }}>
+                    {thumb && <img src={thumb} alt={p.name} style={{ width:70, height:70, objectFit:"cover", borderRadius:10, border:"2px solid var(--ink)", flexShrink:0 }} />}
+                    <div style={{ flex:1, minWidth:200 }}>
+                      <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
+                        <strong style={{ fontSize:17 }}>{p.name}</strong>
+                        {!isHidden && (
+                          <span style={{ fontSize:13, fontWeight:700, padding:"2px 10px", borderRadius:99,
+                            background: isOos ? "#ffd0d0" : isLow ? "#fff3cd" : "#d4f7d4",
+                            color:      isOos ? "#900"    : isLow ? "#7a5800" : "#1a6b1a" }}>
+                            {isOos ? "Out of Stock" : isLow ? `⚠️ Only ${p.stock} left!` : `✓ ${p.stock} in stock`}
+                          </span>
+                        )}
+                        <span style={{ fontSize:13, opacity:.6 }}>${Number(p.price).toFixed(2)} · {CAT_OPTIONS.find(c=>c.id===p.cat)?.label}</span>
+                      </div>
+                      <p style={{ margin:"0 0 10px", fontSize:13, opacity:.7 }}>{p.blurb}</p>
+                      {!isHidden && (
+                        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+                          <span style={{ fontSize:13, fontWeight:700 }}>Update stock:</span>
+                          <input className="input" type="number" min="0"
+                            style={{ width:80, padding:"6px 10px", fontSize:14 }}
+                            placeholder={String(p.stock || 0)}
+                            value={stockEdit[p.id] !== undefined ? stockEdit[p.id] : ""}
+                            onChange={(e) => setStockEdit((s) => ({...s, [p.id]: e.target.value}))} />
+                          <button className="btn btn--sm" onClick={() => updateStock(p)}
+                            disabled={stockEdit[p.id] === undefined || stockEdit[p.id] === ""}>
+                            Save stock
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ display:"flex", gap:8, flexShrink:0, flexWrap:"wrap" }}>
+                      <button className="btn btn--sm btn--ghost" onClick={() => startEdit(p)}>Edit</button>
+                      <button className="btn btn--sm btn--ghost" onClick={() => toggleHide(p)}
+                        style={{ borderColor:"#888", color:"#555" }}>
+                        {isHidden ? "Unhide" : "Hide"}
+                      </button>
+                      <button className="btn btn--sm" style={{ background:"#c00", borderColor:"#c00" }}
+                        onClick={() => deleteProduct(p.id)}>Delete</button>
+                    </div>
+                  </div>
                 </div>
-                <p style={{ margin:"0 0 10px", fontSize:13, opacity:.7 }}>{p.blurb}</p>
-                {/* Quick stock editor */}
-                <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
-                  <span style={{ fontSize:13, fontWeight:700 }}>Update stock:</span>
-                  <input className="input" type="number" min="0"
-                    style={{ width:80, padding:"6px 10px", fontSize:14 }}
-                    placeholder={String(p.stock || 0)}
-                    value={stockEdit[p.id] !== undefined ? stockEdit[p.id] : ""}
-                    onChange={(e) => setStockEdit((s) => ({...s, [p.id]: e.target.value}))} />
-                  <button className="btn btn--sm" onClick={() => updateStock(p)}
-                    disabled={stockEdit[p.id] === undefined || stockEdit[p.id] === ""}>
-                    Save stock
-                  </button>
-                </div>
-              </div>
-              <div style={{ display:"flex", gap:8, flexShrink:0 }}>
-                <button className="btn btn--sm btn--ghost" onClick={() => startEdit(p)}>Edit</button>
-                <button className="btn btn--sm" style={{ background:"#c00", borderColor:"#c00" }} onClick={() => deleteProduct(p.id)}>Hide</button>
-              </div>
-            </div>
-          </div>
+              );
+            })}
+          </React.Fragment>
         );
-      })}
+      })()}
     </div>
   );
 }

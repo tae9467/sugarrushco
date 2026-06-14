@@ -115,10 +115,14 @@ const CAT_GRADIENTS = {
 };
 function ProductImage({ product, height = 200, radius = 14 }) {
   const bg = CAT_GRADIENTS[product.cat] || CAT_GRADIENTS.lipgloss;
-  if (product.image_url) {
+  let imgSrc = product.image_url || "";
+  if (!imgSrc && product.images) {
+    try { imgSrc = JSON.parse(product.images)[0] || ""; } catch {}
+  }
+  if (imgSrc) {
     return (
       <div className="pcard-img" style={{ height, borderRadius: radius, overflow: "hidden", background: bg }}>
-        <img src={product.image_url} alt={product.name}
+        <img src={imgSrc} alt={product.name}
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       </div>
     );
