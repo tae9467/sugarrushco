@@ -88,23 +88,47 @@ app.get("/products", async (req, res) => {
 
 // ── PUBLIC: POST /create-checkout ────────────────────────────────────────────
 app.post("/create-checkout", async (req, res) => {
-  const { cart, form, shipping, orderNo } = req.body;
+  const { cart, form, orderNo } = req.body;
   if (!cart || !cart.length) return res.status(400).json({ error: "cart required" });
   try {
-    const line_items = cart.map((item) => ({
-      price_data: {
-        currency: "usd",
-        product_data: { name: item.name },
-        unit_amount: Math.round(item.price * 100),
-      },
-      quantity: item.qty,
-    }));
-    if (shipping && shipping > 0) {
+    // Look up real prices from Supabase — never trust client-sent prices
+    const ids = cart.map((i) => i.id);
+    const { data: products, error: dbErr } = await sb.from("products").select("id, name, price").in("id", ids);
+    if (dbErr) throw new Error("Could not verify product prices");
+
+    const productMap = {};
+    products.forEach((p) => { productMap[p.id] = p; });
+
+    const line_items = [];
+    const itemLabels = [];
+    let subtotal = 0;
+
+    for (const item of cart) {
+      const p = productMap[item.id];
+      if (!p) return res.status(400).json({ error: `Product ${item.id} not found` });
+      const qty = Math.max(1, Math.round(item.qty));
+      subtotal += p.price * qty;
+      itemLabels.push(`${p.name} x${qty}`);
       line_items.push({
-        price_data: { currency: "usd", product_data: { name: "Shipping" }, unit_amount: Math.round(shipping * 100) },
+        price_data: {
+          currency: "usd",
+          product_data: { name: p.name },
+          unit_amount: Math.round(p.price * 100),
+        },
+        quantity: qty,
+      });
+    }
+
+    const shipping = subtotal >= 35 ? 0 : 5;
+    if (shipping > 0) {
+      line_items.push({
+        price_data: { currency: "usd", product_data: { name: "Shipping" }, unit_amount: shipping * 100 },
         quantity: 1,
       });
     }
+
+    const customerAddress = form.fullAddress || `${form.address || ""}${form.address2 ? ", " + form.address2 : ""}, ${form.city || ""} ${form.zip || ""}`;
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -112,12 +136,12 @@ app.post("/create-checkout", async (req, res) => {
       customer_email: form.email,
       automatic_tax: { enabled: true },
       metadata: {
-        order_no:          orderNo,
-        customer_name:     form.name,
-        customer_email:    form.email,
-        customer_address:  `${form.address}, ${form.city} ${form.zip}`,
-        items:             cart.map((i) => `${i.name} x${i.qty}`).join(", "),
-        items_json:        JSON.stringify(cart.map((i) => ({ id: i.id, qty: i.qty }))),
+        order_no:         orderNo,
+        customer_name:    form.name,
+        customer_email:   form.email,
+        customer_address: customerAddress,
+        items:            itemLabels.join(", "),
+        items_json:       JSON.stringify(cart.map((i) => ({ id: i.id, qty: i.qty }))),
       },
       success_url: "https://sugarrushco.shop/?payment=success",
       cancel_url:  "https://sugarrushco.shop/",

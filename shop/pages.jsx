@@ -153,7 +153,7 @@ const CO_FIELDS = [
 ];
 
 function CheckoutPage({ cart, subtotal, go, onPlaced }) {
-  const [form, setForm]   = usePState({ name:"", email:"", address:"", city:"", zip:"" });
+  const [form, setForm]   = usePState({ name:"", email:"", address:"", address2:"", city:"", zip:"" });
   const [errs, setErrs]   = usePState({});
   const [coErr, setCoErr] = usePState("");
   const [going, setGoing] = usePState(false);
@@ -163,7 +163,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
 
   const validate = () => {
     const e = {};
-    CO_FIELDS.forEach((f) => { if (!form[f.id].trim()) e[f.id] = "needed, please!"; });
+    CO_FIELDS.forEach((f) => { if (!f.optional && !form[f.id].trim()) e[f.id] = "needed, please!"; });
     if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = "hmm, that email looks off";
     setErrs(e);
     return Object.keys(e).length === 0;
@@ -191,7 +191,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
       const res  = await fetch((window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com") + "/create-checkout", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ cart: enrichedCart, form, shipping, orderNo })
+        body:    JSON.stringify({ cart: enrichedCart, form: { ...form, fullAddress: [form.address, form.address2].filter(Boolean).join(", ") + ", " + form.city + " " + form.zip }, shipping, orderNo })
       });
       const data = await res.json();
       if (data.url) {
@@ -990,3 +990,4 @@ function AdminPage({ go }) {
 }
 
 Object.assign(window, { ShopPage, ProductPage, CartDrawer, CheckoutPage, ConfirmPage, ContactPage, TermsPage, RefundPage, AdminPage });
+
