@@ -17,8 +17,14 @@ const RAW_WHITELIST = process.env.ADMIN_IP_WHITELIST || "";
 const IP_WHITELIST  = RAW_WHITELIST.split(",").map((s) => s.trim()).filter(Boolean);
 
 function getClientIP(req) {
+  // x-forwarded-for can be spoofed by the client if we read the first value.
+  // Render's load balancer appends the real client IP last — so we take the
+  // last entry in the chain, which only Render can write, not the visitor.
   const forwarded = req.headers["x-forwarded-for"];
-  if (forwarded) return forwarded.split(",")[0].trim();
+  if (forwarded) {
+    const parts = forwarded.split(",").map((s) => s.trim());
+    return parts[parts.length - 1];
+  }
   return req.socket.remoteAddress || "";
 }
 
