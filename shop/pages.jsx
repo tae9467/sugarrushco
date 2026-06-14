@@ -1269,12 +1269,20 @@ function AdminPage({ go }) {
   const [newCount, setNewCount] = usePState(0);
 
   const login = async () => {
-    if (password === (window.ADMIN_PASSWORD || "sugarrush2026")) {
+    if (!password.trim()) { setErr("Enter your password."); return; }
+    setErr("");
+    try {
+      const res = await fetch(SERVER_URL + "/orders", {
+        headers: { "x-admin-secret": password }
+      });
+      if (res.status === 401) { setErr("Wrong password."); return; }
+      if (res.status === 429) { setErr("Too many attempts — wait a few minutes."); return; }
+      if (!res.ok) throw new Error("Server error");
       setSecret(password);
       setAuthed(true);
       fetchOrders(password);
-    } else {
-      setErr("Wrong password.");
+    } catch(e) {
+      setErr("Could not reach server. Try again.");
     }
   };
 
