@@ -199,7 +199,7 @@ app.put("/admin/products/:id", adminAuth, async (req, res) => {
 
 // ── ADMIN: DELETE /admin/products/:id ────────────────────────────────────────
 app.delete("/admin/products/:id", adminAuth, async (req, res) => {
-  const { error } = await sb.from("products").update({ active: false }).eq("id", req.params.id);
+  const { error } = await sb.from("products").delete().eq("id", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
