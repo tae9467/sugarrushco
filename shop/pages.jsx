@@ -1397,14 +1397,15 @@ function AdminPage({ go }) {
 
   if (authed === "busted") return (
     <div style={{
-      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      position: "fixed", inset: 0, zIndex: 9999,
+      display: "flex", alignItems: "center", justifyContent: "center",
       backgroundImage: "repeating-conic-gradient(#C9AAEB 0% 25%, #9B72D8 0% 50%)",
       backgroundSize: "60px 60px"
     }}>
       <div style={{
         background: "white", border: "4px solid #29261b", borderRadius: 20,
         padding: "48px 40px", maxWidth: 420, textAlign: "center",
-        boxShadow: "8px 8px 0 #29261b"
+        boxShadow: "8px 8px 0 #29261b", margin: "0 16px"
       }}>
         <div style={{ fontSize: 64, marginBottom: 8 }}>🃏</div>
         <h1 style={{ fontFamily: "var(--disp)", fontSize: 28, margin: "0 0 12px" }}>Nice try, babe.</h1>
