@@ -17,15 +17,13 @@ const RAW_WHITELIST = process.env.ADMIN_IP_WHITELIST || "";
 const IP_WHITELIST  = RAW_WHITELIST.split(",").map((s) => s.trim()).filter(Boolean);
 
 function getClientIP(req) {
-  // x-forwarded-for can be spoofed by the client if we read the first value.
-  // Render's load balancer appends the real client IP last — so we take the
-  // last entry in the chain, which only Render can write, not the visitor.
-  const forwarded = req.headers["x-forwarded-for"];
-  if (forwarded) {
-    const parts = forwarded.split(",").map((s) => s.trim());
-    return parts[parts.length - 1];
-  }
-  return req.socket.remoteAddress || "";
+  // cf-connecting-ip is set by Cloudflare to the real client IP and cannot
+  // be spoofed — clients can't inject their own version of this header.
+  // Fall back to first x-forwarded-for value (also set by Cloudflare here).
+  return req.headers["cf-connecting-ip"]
+    || (req.headers["x-forwarded-for"] || "").split(",")[0].trim()
+    || req.socket.remoteAddress
+    || "";
 }
 
 function ipAllowed(req) {
@@ -138,11 +136,9 @@ function adminAuth(req, res, next) {
 app.get("/admin/my-ip", (req, res) => {
   const forwarded = req.headers["x-forwarded-for"] || "";
   res.json({
+    cf_connecting_ip: req.headers["cf-connecting-ip"] || null,
     forwarded_header: forwarded,
     all_values: forwarded.split(",").map((s) => s.trim()),
-    first: forwarded.split(",")[0]?.trim() || "",
-    last:  forwarded.split(",").pop()?.trim() || "",
-    socket: req.socket.remoteAddress,
     detected: getClientIP(req)
   });
 });
