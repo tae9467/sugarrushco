@@ -413,8 +413,8 @@ function ConfirmPage({ go }) {
   return (
     <div className="confirm-wrap" data-screen-label="Order confirmed">
       <div className="confirm">
-        <CherryIcon size={46} />
-        <h1 className="confirm-h">Order confirmed , sweet!!</h1>
+        <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." style={{ height:80, objectFit:"contain", marginBottom:8 }} />
+        <h1 className="confirm-h">Order confirmed, sweet!!</h1>
         <div className="confirm-no">order no. {orderNo}</div>
         {items.length > 0 && (
           <div className="confirm-items">
@@ -480,8 +480,8 @@ function ContactPage({ go }) {
   if (sent) return (
     <div className="confirm-wrap" data-screen-label="Message sent">
       <div className="confirm">
-        <CherryIcon size={46} />
-        <h1 className="confirm-h">Message sent!!</h1>
+        <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." style={{ height:80, objectFit:"contain", marginBottom:8 }} />
+        <h1 className="confirm-h">Order confirmed, sweet!!</h1>
         <p className="confirm-sub">We got your note and will get back to you super soon!</p>
         <button className="btn" onClick={() => go("home")}>Back to the shop</button>
       </div>
@@ -1111,4 +1111,5 @@ function AdminPage({ go }) {
 }
 
 Object.assign(window, { ShopPage, ProductPage, CartDrawer, CheckoutPage, ConfirmPage, ContactPage, TermsPage, RefundPage, AdminPage });
+
 
