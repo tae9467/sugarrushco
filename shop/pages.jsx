@@ -1115,7 +1115,9 @@ function AdminPage({ go }) {
       const [main, hidden] = await Promise.all([
         fetch(SERVER_URL + "/orders", { headers: hdrs }).then((r) => r.json()),
         fetch(SERVER_URL + "/orders?hidden=true", { headers: hdrs }).then((r) => r.json()),
-              ]);\n      if (main.error) throw new Error(main.error);\n      setOrders((prev) => {
+      ]);
+      if (main.error) throw new Error(main.error);
+      setOrders((prev) => {
         if (prev.length && main.length > prev.length) {
           setNewCount(main.length - prev.length);
           try { new Audio("https://www.soundjay.com/buttons/sounds/button-09a.mp3").play(); } catch {}
@@ -1123,7 +1125,7 @@ function AdminPage({ go }) {
         return main;
       });
       setHiddenOrders(Array.isArray(hidden) ? hidden : []);
-          } catch (e) {
+    } catch (e) {
       setErr("Could not load orders: " + e.message);
     }
     if (!silent) setLoading(false);
