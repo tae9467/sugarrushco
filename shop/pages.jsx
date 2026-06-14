@@ -2,9 +2,38 @@
 const { useState: usePState, useMemo: usePMemo, useEffect: usePEffect, useRef: usePRef } = React;
 
 /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Shop page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
+function ComingSoonBanner() {
+  return (
+    <div style={{
+      textAlign: "center", padding: "80px 24px",
+      display: "flex", flexDirection: "column", alignItems: "center", gap: 16
+    }}>
+      <div style={{ fontSize: 52 }}>🍒</div>
+      <h2 style={{ fontFamily: "var(--disp)", fontSize: "clamp(26px,4vw,38px)", margin: 0 }}>
+        We're all stocked out!
+      </h2>
+      <p style={{ fontSize: 16, lineHeight: 1.7, maxWidth: 420, opacity: .7, margin: 0 }}>
+        Every last little thing flew off the shelves — thank you so much!
+        New goodies drop <strong>every other Friday</strong>, so check back soon. 🎀
+      </p>
+      <p style={{ fontSize: 14, opacity: .5, margin: 0 }}>
+        Follow us on Instagram <strong>@sugarrushco</strong> so you never miss a drop!
+      </p>
+    </div>
+  );
+}
+
 function ShopPage({ route, go, onAdd }) {
   const cat  = route.cat || "all";
   const list = SHOP_DATA.products.filter((p) => cat === "all" || p.cat === cat);
+
+  if (SHOP_DATA.products.length === 0) return (
+    <div className="rail sec" data-screen-label="Shop">
+      <SectionHead title="The whole sweet shop" />
+      <ComingSoonBanner />
+    </div>
+  );
+
   return (
     <div className="rail sec" data-screen-label="Shop">
       <SectionHead title="The whole sweet shop" />
@@ -21,6 +50,7 @@ function ShopPage({ route, go, onAdd }) {
       <div className="pgrid">
         {list.map((p) => <ProductCard key={p.id} p={p} go={go} onAdd={onAdd} showBlurb />)}
       </div>
+      {list.length === 0 && <ComingSoonBanner />}
     </div>
   );
 }

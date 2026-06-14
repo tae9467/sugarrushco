@@ -65,8 +65,8 @@ function App() {
     fetch((window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com") + "/products")
       .then((r) => r.json())
       .then((data) => {
-        if (Array.isArray(data) && data.length > 0) {
-          // Convert server products to match SHOP_DATA format
+        if (Array.isArray(data)) {
+          // Always replace with server data — empty array means all hidden
           SHOP_DATA.products = data.map((p) => ({
             id:    String(p.id),
             cat:   p.cat,
@@ -75,9 +75,9 @@ function App() {
             stock: p.stock || 0,
             blurb: p.blurb || "",
             notes: (p.notes || "").split(",").map((n) => n.trim()).filter(Boolean),
-            image_url: p.image_url || ""
+            image_url: p.image_url || "",
+            images: p.images || ""
           }));
-          // Update featured to use first 4 product ids
           SHOP_DATA.featured = SHOP_DATA.products.slice(0, 4).map((p) => p.id);
         }
         setProductsLoaded(true);

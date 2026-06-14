@@ -1,7 +1,24 @@
 // Sugar Rush Co. -- home page: 3 variants + shared sections
 
 function HomeStorefront({ t, tone, go, onAdd }) {
-  const featured = SHOP_DATA.featured.slice(0, 4).map(productById);
+  const featured = SHOP_DATA.featured.slice(0, 4).map(productById).filter(Boolean);
+  if (featured.length === 0) return (
+    <div data-screen-label="Home - Storefront">
+      <section className="sec center" style={{ paddingBottom: 70 }}>
+        <div className="rail">
+          <div className="eyebrow">{tone.eyebrow}</div>
+          <h1 className="hero-title">{tone.title}</h1>
+          <p className="hero-sub">{tone.sub}</p>
+          <Awning awning={t.awning} name={t.shopName} />
+          <div style={{ textAlign:"center", padding:"48px 0" }}>
+            <p style={{ fontFamily:"var(--disp)", fontSize:22, marginBottom:12 }}>New drop coming soon! 🍒</p>
+            <p style={{ opacity:.6, fontSize:15 }}>New goodies every other Friday — follow <strong>@sugarrushco</strong> so you don't miss it.</p>
+            <button className="btn" style={{ marginTop:20 }} onClick={() => go("shop")}>See what's available</button>
+          </div>
+        </div>
+      </section>
+    </div>
+  );
   return (
     <div data-screen-label="Home - Storefront">
       <section className="sec center" style={{ paddingBottom: 70 }}>
