@@ -134,6 +134,19 @@ function adminAuth(req, res, next) {
   next();
 }
 
+// ── TEMP DEBUG: GET /admin/my-ip — see what IP the server detects ────────────
+app.get("/admin/my-ip", (req, res) => {
+  const forwarded = req.headers["x-forwarded-for"] || "";
+  res.json({
+    forwarded_header: forwarded,
+    all_values: forwarded.split(",").map((s) => s.trim()),
+    first: forwarded.split(",")[0]?.trim() || "",
+    last:  forwarded.split(",").pop()?.trim() || "",
+    socket: req.socket.remoteAddress,
+    detected: getClientIP(req)
+  });
+});
+
 // ── ADMIN: GET /admin/ip-check — instant IP whitelist check (no rate limit) ──
 app.get("/admin/ip-check", (req, res) => {
   if (!ipAllowed(req)) return res.status(403).json({ error: "Not allowed." });
