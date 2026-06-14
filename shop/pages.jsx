@@ -960,9 +960,6 @@ function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTra
               <button className="btn btn--sm btn--ghost" style={{ borderColor:"#888", color:"#555" }} onClick={onHide}>
                 {order.hidden ? "Unhide" : "Hide"}
               </button>
-              <button className="btn btn--sm" style={{ background:"#c00", borderColor:"#c00" }} onClick={onDelete}>
-                Delete & Refund
-              </button>
             </React.Fragment>
           )}
         </div>
