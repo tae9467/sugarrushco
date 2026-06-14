@@ -413,7 +413,7 @@ function ConfirmPage({ go }) {
   return (
     <div className="confirm-wrap" data-screen-label="Order confirmed">
       <div className="confirm">
-        <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." style={{ height:80, objectFit:"contain", marginBottom:8 }} />
+        <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." className="confirm-logo" style={{ objectFit:"contain", marginBottom:0 }} />
         <h1 className="confirm-h">Order confirmed, sweet!!</h1>
         <div className="confirm-no">order no. {orderNo}</div>
         {items.length > 0 && (
