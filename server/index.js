@@ -152,15 +152,12 @@ app.post("/create-checkout", async (req, res) => {
 
 // ── ADMIN: GET /orders ────────────────────────────────────────────────────────
 app.get("/orders", adminAuth, async (req, res) => {
-  const hidden  = req.query.hidden  === "true";
-  const deleted = req.query.deleted === "true";
+  const hidden = req.query.hidden === "true";
   let query = sb.from("orders").select("*").order("created_at", { ascending: false });
-  if (deleted) {
-    query = query.eq("deleted", true);
-  } else if (hidden) {
-    query = query.eq("hidden", true).eq("deleted", false);
+  if (hidden) {
+    query = query.eq("hidden", true);
   } else {
-    query = query.eq("hidden", false).eq("deleted", false);
+    query = query.eq("hidden", false);
   }
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });

@@ -432,6 +432,7 @@ function ConfirmPage({ go }) {
         <p className="confirm-sub">
           Your goodies are getting wrapped in tissue paper and tied with a bow as we speak.
           {order.form && order.form.email ? ` A confirmation is headed to ${order.form.email}.` : ""}
+          {" "}Once your order ships, you'll get another email with your USPS tracking number.
         </p>
         <div className="btn-row">
           <button className="btn" onClick={() => go("shop")}>Keep shopping</button>
@@ -916,7 +917,7 @@ function ProductsTab({ secret }) {
   );
 }
 
-function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTracking, sending, sent, onSendTracking, showRestore, onRestore }) {
+function OrderCard({ order, secret, onUpdate, onHide, tracking, setTracking, sending, sent, onSendTracking, showRestore, onRestore }) {
   const [editing, setEditing] = usePState(false);
   const [editForm, setEditForm] = usePState({ customer_name: order.customer_name, customer_email: order.customer_email, customer_address: order.customer_address });
   const [saving, setSaving] = usePState(false);
@@ -1089,7 +1090,6 @@ function AdminPage({ go }) {
   const [tab,      setTab]      = usePState("orders");
   const [orders,   setOrders]   = usePState([]);
   const [hiddenOrders,  setHiddenOrders]  = usePState([]);
-  const [deletedOrders, setDeletedOrders] = usePState([]);
   const [loading,  setLoading]  = usePState(false);
   const [err,      setErr]      = usePState("");
   const [tracking, setTracking] = usePState({});
@@ -1112,13 +1112,10 @@ function AdminPage({ go }) {
     setErr("");
     try {
       const hdrs = { "x-admin-secret": pwd || secret };
-      const [main, hidden, deleted] = await Promise.all([
+      const [main, hidden] = await Promise.all([
         fetch(SERVER_URL + "/orders", { headers: hdrs }).then((r) => r.json()),
         fetch(SERVER_URL + "/orders?hidden=true", { headers: hdrs }).then((r) => r.json()),
-        fetch(SERVER_URL + "/orders?deleted=true", { headers: hdrs }).then((r) => r.json()),
-      ]);
-      if (main.error) throw new Error(main.error);
-      setOrders((prev) => {
+              ]);\n      if (main.error) throw new Error(main.error);\n      setOrders((prev) => {
         if (prev.length && main.length > prev.length) {
           setNewCount(main.length - prev.length);
           try { new Audio("https://www.soundjay.com/buttons/sounds/button-09a.mp3").play(); } catch {}
@@ -1126,8 +1123,7 @@ function AdminPage({ go }) {
         return main;
       });
       setHiddenOrders(Array.isArray(hidden) ? hidden : []);
-      setDeletedOrders(Array.isArray(deleted) ? deleted : []);
-    } catch (e) {
+          } catch (e) {
       setErr("Could not load orders: " + e.message);
     }
     if (!silent) setLoading(false);
@@ -1166,15 +1162,6 @@ function AdminPage({ go }) {
     fetchOrders();
   };
 
-  const deleteOrder = async (order) => {
-    const res = await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
-      method: "DELETE", headers: { "x-admin-secret": secret }
-    });
-    const data = await res.json();
-    if (!res.ok) { setErr("Delete failed: " + (data.error || "Unknown error")); return; }
-    fetchOrders();
-  };
-
   const restoreOrder = async (order) => {
     await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
       method: "PUT", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
@@ -1190,7 +1177,6 @@ function AdminPage({ go }) {
   const orderCardProps = (order, extra) => ({
     order, secret, onUpdate: updateOrder,
     onHide: () => hideOrder(order),
-    onDelete: () => deleteOrder(order),
     tracking, setTracking, sending, sent,
     onSendTracking: sendTracking,
     ...extra
@@ -1258,11 +1244,6 @@ function AdminPage({ go }) {
 
       {tab === "deleted" && (
         <div>
-          <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 20px" }}>Deleted Orders</h3>
-          {deletedOrders.length === 0 && <p style={{ opacity:.5 }}>No deleted orders.</p>}
-          {deletedOrders.map((order) => (
-            <OrderCard key={order.order_no} {...orderCardProps(order, { showRestore: true, onRestore: () => restoreOrder(order) })} />
-          ))}
           <DeletedProductsTab secret={secret} />
         </div>
       )}
@@ -1297,5 +1278,7 @@ function AdminPage({ go }) {
 }
 
 Object.assign(window, { ShopPage, ProductPage, CartDrawer, CheckoutPage, ConfirmPage, ContactPage, TermsPage, RefundPage, AdminPage });
+
+
 
 
