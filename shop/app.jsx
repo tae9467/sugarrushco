@@ -126,7 +126,13 @@ function App() {
   const setQty    = (id, qty) => setCart((c) => qty <= 0 ? c.filter((l) => l.id !== id) : c.map((l) => l.id === id ? { ...l, qty } : l));
   const removeLine = (id) => setCart((c) => c.filter((l) => l.id !== id));
 
-  const cartCount = cart.reduce((s, l) => s + l.qty, 0);
+  // Auto-remove cart items whose product no longer exists (e.g. stale test data)
+  useAEffect(() => {
+    if (!productsLoaded) return;
+    setCart((c) => c.filter((l) => !!productById(l.id)));
+  }, [productsLoaded]);
+
+  const cartCount = cart.reduce((s, l) => { const p = productById(l.id); return s + (p ? l.qty : 0); }, 0);
   const subtotal  = cart.reduce((s, l) => { const p = productById(l.id); return s + (p ? p.price * l.qty : 0); }, 0);
 
   const tone      = SHOP_DATA.tones[t.tone] || SHOP_DATA.tones.Sweet;

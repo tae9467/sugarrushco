@@ -219,7 +219,6 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     const fullAddress  = [form.address, form.address2].filter(Boolean).join(", ") + ", " + form.city + (form.state ? ", " + form.state : "") + " " + form.zip;
     const SERVER       = window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com";
 
-    // Wake up Render if it's sleeping, then retry checkout up to 3x
     const tryCheckout = async (attemptsLeft) => {
       try {
         const res  = await fetch(SERVER + "/create-checkout", {
@@ -227,21 +226,21 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify({ cart: enrichedCart, form: { ...form, fullAddress }, shipping, orderNo })
         });
-        const data = await res.json();
+        let data;
+        try { data = await res.json(); } catch { data = {}; }
+        if (!res.ok) throw new Error(data.error || "Server error " + res.status);
         if (data.url) {
           window.location.href = data.url;
         } else {
-          throw new Error(data.error || "Could not create checkout session");
+          throw new Error(data.error || "No checkout URL returned");
         }
       } catch(e) {
         if (attemptsLeft > 1 && e.message === "Failed to fetch") {
-          setCoErr("Waking up the server... retrying in 5 seconds (" + (attemptsLeft - 1) + " attempt" + (attemptsLeft - 1 > 1 ? "s" : "") + " left)");
+          setCoErr("Server is starting up... retrying in 5 seconds");
           await new Promise((r) => setTimeout(r, 5000));
           return tryCheckout(attemptsLeft - 1);
         }
-        setCoErr(e.message === "Failed to fetch"
-          ? "Could not reach the server. Please try again in a moment."
-          : "Payment error: " + e.message);
+        setCoErr("Payment error: " + e.message);
         setGoing(false);
       }
     };
