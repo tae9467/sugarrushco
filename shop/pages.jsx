@@ -918,7 +918,7 @@ function ProductsTab({ secret }) {
   );
 }
 
-function OrderCard({ order, secret, onUpdate, onHide, tracking, setTracking, sending, sent, onSendTracking, showRestore, onRestore, onDeliver, showDelivered }) {
+function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTracking, sending, sent, onSendTracking, showRestore, onRestore, onDeliver, showDelivered }) {
   const [editing, setEditing] = usePState(false);
   const [editForm, setEditForm] = usePState({ customer_name: order.customer_name, customer_email: order.customer_email, customer_address: order.customer_address });
   const [saving, setSaving] = usePState(false);
@@ -962,6 +962,11 @@ function OrderCard({ order, secret, onUpdate, onHide, tracking, setTracking, sen
               <button className="btn btn--sm btn--ghost" style={{ borderColor:"#888", color:"#555" }} onClick={onHide}>
                 {order.hidden ? "Unhide" : "Hide"}
               </button>
+              {order.status === "pending" && (
+                <button className="btn btn--sm" style={{ background:"#c00", borderColor:"#c00" }} onClick={onDelete}>
+                  Delete
+                </button>
+              )}
             </React.Fragment>
           )}
         </div>
@@ -1120,6 +1125,134 @@ function DeletedProductsTab({ secret }) {
   );
 }
 
+/* ── Reviews Tab ── */
+function ReviewsTab({ secret }) {
+  const [reviews, setReviews] = usePState([]);
+  const [loading, setLoading] = usePState(true);
+  const [err,     setErr]     = usePState("");
+  const [replyText, setReplyText] = usePState({});
+  const [replying,  setReplying]  = usePState({});
+  const [replySent, setReplySent] = usePState({});
+  const [deleting,  setDeleting]  = usePState({});
+
+  const load = async () => {
+    setLoading(true); setErr("");
+    try {
+      const res  = await fetch(SERVER_URL + "/admin/reviews", { headers: { "x-admin-secret": secret } });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setReviews(Array.isArray(data) ? data : []);
+    } catch(e) { setErr("Could not load reviews: " + e.message); }
+    setLoading(false);
+  };
+
+  usePEffect(() => { load(); }, []);
+
+  const sendReply = async (id) => {
+    const text = (replyText[id] || "").trim();
+    if (!text) return;
+    setReplying((s) => ({ ...s, [id]: true }));
+    try {
+      const res = await fetch(SERVER_URL + "/admin/reviews/" + id + "/reply", {
+        method: "POST", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body: JSON.stringify({ reply: text })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      setReplySent((s) => ({ ...s, [id]: true }));
+      setReviews((prev) => prev.map((r) => r.id === id ? { ...r, reply: text } : r));
+    } catch(e) { alert("Reply failed: " + e.message); }
+    setReplying((s) => ({ ...s, [id]: false }));
+  };
+
+  const deleteReview = async (id) => {
+    if (!confirm("Delete this review? This cannot be undone.")) return;
+    setDeleting((s) => ({ ...s, [id]: true }));
+    try {
+      await fetch(SERVER_URL + "/admin/reviews/" + id, {
+        method: "DELETE", headers: { "x-admin-secret": secret }
+      });
+      setReviews((prev) => prev.filter((r) => r.id !== id));
+    } catch(e) { alert("Delete failed: " + e.message); }
+    setDeleting((s) => ({ ...s, [id]: false }));
+  };
+
+  if (loading) return <p style={{ opacity:.6 }}>Loading reviews…</p>;
+
+  return (
+    <div>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+        <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:0 }}>All Reviews ({reviews.length})</h3>
+        <button className="btn btn--sm btn--ghost" onClick={load}>Refresh</button>
+      </div>
+      {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:8, padding:"10px 14px", marginBottom:14, color:"#900", fontSize:14 }}>{err}</div>}
+      {reviews.length === 0 && <p style={{ opacity:.5 }}>No reviews yet.</p>}
+      {reviews.map((r) => {
+        let imgs = [];
+        try { imgs = JSON.parse(r.images || "[]"); } catch {}
+        const hasReply = r.reply;
+        return (
+          <div key={r.id} style={{ ...CARD_STYLE }}>
+            {/* Header */}
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+              <div>
+                <strong style={{ fontSize:16 }}>{r.product_name}</strong>
+                <span style={{ marginLeft:10, fontSize:13, opacity:.55 }}>{r.order_ref}</span>
+              </div>
+              <button className="btn btn--sm" style={{ background:"#c00", borderColor:"#c00" }}
+                disabled={deleting[r.id]}
+                onClick={() => deleteReview(r.id)}>
+                {deleting[r.id] ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+
+            {/* Reviewer info + rating */}
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+              <StarRating value={r.rating} size={18} />
+              <strong style={{ fontSize:14 }}>{r.customer_name}</strong>
+              <span style={{ fontSize:12, opacity:.45 }}>{new Date(r.created_at).toLocaleDateString()}</span>
+            </div>
+
+            {r.body && <p style={{ margin:"0 0 10px", fontSize:14, lineHeight:1.6 }}>{r.body}</p>}
+
+            {imgs.length > 0 && (
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:10 }}>
+                {imgs.map((src, j) => (
+                  <img key={j} src={src} alt="" style={{ width:70, height:70, objectFit:"cover", borderRadius:8, border:"2px solid var(--ink)", cursor:"pointer" }}
+                    onClick={() => window.open(src, "_blank")} />
+                ))}
+              </div>
+            )}
+
+            {/* Existing reply */}
+            {hasReply && (
+              <div style={{ background:"#f8f4ff", borderLeft:"4px solid #C9AAEB", borderRadius:"0 8px 8px 0", padding:"12px 16px", marginBottom:10 }}>
+                <div style={{ fontSize:11, fontWeight:700, textTransform:"uppercase", opacity:.6, marginBottom:4 }}>Your reply</div>
+                <p style={{ margin:0, fontSize:14 }}>{r.reply}</p>
+              </div>
+            )}
+
+            {/* Reply box */}
+            <div style={{ display:"flex", gap:8, alignItems:"flex-end", marginTop:10 }}>
+              <textarea className="input" rows={2}
+                placeholder={hasReply ? "Edit reply…" : "Write a reply…"}
+                style={{ flex:1, resize:"vertical", fontSize:14 }}
+                value={replyText[r.id] !== undefined ? replyText[r.id] : (r.reply || "")}
+                onChange={(e) => setReplyText((s) => ({ ...s, [r.id]: e.target.value }))} />
+              <button className="btn btn--sm"
+                disabled={replying[r.id] || replySent[r.id]}
+                style={replying[r.id] || replySent[r.id] ? { opacity:.65 } : null}
+                onClick={() => sendReply(r.id)}>
+                {replying[r.id] ? "Sending…" : replySent[r.id] ? "Sent! ✓" : hasReply ? "Update reply" : "Send reply"}
+              </button>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function AdminPage({ go }) {
   const [authed,   setAuthed]   = usePState(false);
   const [password, setPassword] = usePState("");
@@ -1212,6 +1345,18 @@ function AdminPage({ go }) {
     fetchOrders();
   };
 
+  const deleteOrder = async (order) => {
+    if (!confirm(`Delete order ${order.order_ref || order.order_no}? This cannot be undone.`)) return;
+    try {
+      const res = await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
+        method: "DELETE", headers: { "x-admin-secret": secret }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      fetchOrders();
+    } catch(e) { setErr("Delete failed: " + e.message); }
+  };
+
   const restoreOrder = async (order) => {
     await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
       method: "PUT", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
@@ -1227,6 +1372,7 @@ function AdminPage({ go }) {
   const orderCardProps = (order, extra) => ({
     order, secret, onUpdate: updateOrder,
     onHide: () => hideOrder(order),
+    onDelete: () => deleteOrder(order),
     onDeliver: () => deliverOrder(order),
     tracking, setTracking, sending, sent,
     onSendTracking: sendTracking,
@@ -1254,6 +1400,7 @@ function AdminPage({ go }) {
   const TABS = [
     ["orders",    "📦 Orders"],
     ["products",  "🛍️ Products"],
+    ["reviews",   "⭐ Reviews"],
     ["delivered", "✅ Delivered"],
     ["hidden",    "👁️ Hidden"],
     ["deleted",   "🗑️ Deleted"],
@@ -1282,6 +1429,8 @@ function AdminPage({ go }) {
       </div>
 
       {tab === "products" && <ProductsTab secret={secret} />}
+
+      {tab === "reviews" && <ReviewsTab secret={secret} />}
 
       {tab === "delivered" && (
         <div>

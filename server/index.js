@@ -1,6 +1,7 @@
-const express = require("express");
-const cors    = require("cors");
-const stripe  = require("stripe")(process.env.STRIPE_SECRET_KEY);
+const express   = require("express");
+const cors      = require("cors");
+const rateLimit = require("express-rate-limit");
+const stripe    = require("stripe")(process.env.STRIPE_SECRET_KEY);
 const { createClient } = require("@supabase/supabase-js");
 const { Resend } = require("resend");
 
@@ -66,10 +67,36 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 // ── JSON body for all other routes ───────────────────────────────────────────
 app.use(express.json());
 
+// ── Rate limiters ─────────────────────────────────────────────────────────────
+// Strict limit on admin routes: 30 requests per 10 minutes per IP
+const adminLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests — please wait a few minutes." }
+});
+
+// General public limit: 100 requests per minute per IP
+const publicLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 100,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests." }
+});
+
+app.use("/admin", adminLimiter);
+app.use("/orders", adminLimiter);
+app.use("/track",  adminLimiter);
+app.use("/create-checkout", publicLimiter);
+
 // ── Admin auth middleware ─────────────────────────────────────────────────────
 function adminAuth(req, res, next) {
   const token = req.headers["x-admin-secret"];
-  if (token !== ADMIN_SECRET) return res.status(401).json({ error: "Unauthorized" });
+  if (!token || token.length < 8 || token !== ADMIN_SECRET) {
+    return res.status(401).json({ error: "Unauthorized" });
+  }
   next();
 }
 
@@ -101,10 +128,24 @@ app.post("/create-checkout", async (req, res) => {
     const line_items    = [];
     let subtotal = 0;
 
+    // Check live stock for all items before creating session
+    const { data: liveProducts, error: stockErr } = await sb
+      .from("products").select("id, name, price, stock").in("id", ids).eq("active", true).eq("deleted", false);
+    if (stockErr) throw new Error("Could not verify stock");
+    const stockMap = {};
+    liveProducts.forEach((p) => { stockMap[p.id] = p; });
+
     for (const item of cart) {
-      const p = productMap[item.id];
+      const p = stockMap[item.id];
       if (!p) return res.status(400).json({ error: "Product not found or unavailable" });
       const qty = Math.min(99, Math.max(1, Math.round(item.qty)));
+      if (p.stock < qty) {
+        return res.status(400).json({
+          error: p.stock === 0
+            ? `"${p.name}" is now out of stock — someone just grabbed the last one!`
+            : `Only ${p.stock} of "${p.name}" left — please update your cart.`
+        });
+      }
       subtotal += p.price * qty;
       verifiedItems.push({ id: p.id, name: p.name, price: p.price, qty });
       line_items.push({
@@ -229,6 +270,16 @@ app.delete("/admin/products/:id", adminAuth, async (req, res) => {
   const { error } = await sb.from("products").update({
     deleted: true, deleted_at: new Date().toISOString(), active: false
   }).eq("id", req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// ── ADMIN: DELETE /admin/orders/:id — delete a pending order ─────────────────
+app.delete("/admin/orders/:id", adminAuth, async (req, res) => {
+  const { data: orders } = await sb.from("orders").select("status").eq("order_no", req.params.id).limit(1);
+  if (!orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
+  if (orders[0].status !== "pending") return res.status(400).json({ error: "Only pending orders can be deleted" });
+  const { error } = await sb.from("orders").delete().eq("order_no", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -430,6 +481,59 @@ app.get("/reviews/:productId", async (req, res) => {
     .order("created_at", { ascending: false });
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
+});
+
+// ── ADMIN: GET /admin/reviews ─────────────────────────────────────────────────
+app.get("/admin/reviews", adminAuth, async (req, res) => {
+  const { data, error } = await sb.from("reviews").select("*").order("created_at", { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ── ADMIN: DELETE /admin/reviews/:id ──────────────────────────────────────────
+app.delete("/admin/reviews/:id", adminAuth, async (req, res) => {
+  const { error } = await sb.from("reviews").delete().eq("id", req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true });
+});
+
+// ── ADMIN: POST /admin/reviews/:id/reply ──────────────────────────────────────
+app.post("/admin/reviews/:id/reply", adminAuth, async (req, res) => {
+  const { reply } = req.body;
+  if (!reply) return res.status(400).json({ error: "Reply text required" });
+
+  const { data: reviews } = await sb.from("reviews").select("*").eq("id", req.params.id).limit(1);
+  if (!reviews || reviews.length === 0) return res.status(404).json({ error: "Review not found" });
+  const review = reviews[0];
+
+  await sb.from("reviews").update({ reply, replied_at: new Date().toISOString() }).eq("id", req.params.id);
+
+  // Email the customer their reply
+  if (review.customer_email) {
+    await mail.emails.send({
+      from: `${SHOP_NAME} <${FROM_EMAIL}>`,
+      to: review.customer_email,
+      subject: `Sugar Rush Co. replied to your review 🍒`,
+      html: `
+        <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#29261b;">
+          <div style="background:repeating-linear-gradient(90deg,#C9AAEB 0 46px,#fff 46px 92px);height:60px;border-radius:12px 12px 0 0;"></div>
+          <div style="border:3px solid #29261b;border-top:none;border-radius:0 0 16px 16px;padding:36px 40px;">
+            <h1 style="font-size:24px;margin:0 0 8px;">We replied to your review! 🍒</h1>
+            <p style="margin:0 0 20px;font-size:15px;">Hi ${review.customer_name}, we saw your review of <strong>${review.product_name}</strong> and wanted to respond:</p>
+            <div style="background:#f8f4ff;border-left:4px solid #C9AAEB;padding:16px 20px;border-radius:0 8px 8px 0;margin-bottom:20px;">
+              <p style="margin:0 0 8px;font-size:12px;opacity:.6;text-transform:uppercase;letter-spacing:.06em;">Your review</p>
+              <p style="margin:0 0 16px;font-size:14px;font-style:italic;">"${review.body}"</p>
+              <p style="margin:0 0 8px;font-size:12px;opacity:.6;text-transform:uppercase;letter-spacing:.06em;">Our reply</p>
+              <p style="margin:0;font-size:15px;font-weight:600;">${reply}</p>
+            </div>
+            <p style="font-size:13px;opacity:.6;margin:0;">Thank you so much for your support! 🎀</p>
+          </div>
+        </div>
+      `
+    }).catch((e) => console.error("Reply email error:", e.message));
+  }
+
+  res.json({ ok: true });
 });
 
 // ── Health check ──────────────────────────────────────────────────────────────
