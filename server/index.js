@@ -152,12 +152,15 @@ app.post("/create-checkout", async (req, res) => {
 
 // ── ADMIN: GET /orders ────────────────────────────────────────────────────────
 app.get("/orders", adminAuth, async (req, res) => {
-  const hidden = req.query.hidden === "true";
+  const hidden    = req.query.hidden    === "true";
+  const delivered = req.query.delivered === "true";
   let query = sb.from("orders").select("*").order("created_at", { ascending: false });
   if (hidden) {
-    query = query.eq("hidden", true);
+    query = query.eq("hidden", true).neq("status", "delivered");
+  } else if (delivered) {
+    query = query.eq("status", "delivered");
   } else {
-    query = query.eq("hidden", false);
+    query = query.eq("hidden", false).neq("status", "delivered");
   }
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
@@ -238,7 +241,9 @@ app.post("/track", adminAuth, async (req, res) => {
   if (fetchErr || !orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
   const order = orders[0];
 
-  const { error: updateErr } = await sb.from("orders").update({ tracking_number, tracking_sent: true, status: "shipped" }).eq("order_no", order_id);
+  const { error: updateErr } = await sb.from("orders").update({
+    tracking_number, tracking_sent: true, status: "shipped", shipped_at: new Date().toISOString()
+  }).eq("order_no", order_id);
   if (updateErr) return res.status(500).json({ error: updateErr.message });
 
   const uspsUrl = `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking_number}`;
@@ -269,6 +274,23 @@ app.post("/track", adminAuth, async (req, res) => {
 
   if (emailErr) return res.status(500).json({ error: "Tracking saved but email failed: " + emailErr.message });
   res.json({ ok: true, message: "Tracking saved and email sent!" });
+});
+
+// ── ADMIN: POST /admin/orders/:id/deliver — mark delivered + screenshot ───────
+app.post("/admin/orders/:id/deliver", adminAuth, async (req, res) => {
+  const { data: orders } = await sb.from("orders").select("tracking_number").eq("order_no", req.params.id).limit(1);
+  if (!orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
+  const tracking = orders[0].tracking_number;
+  const screenshotUrl = tracking
+    ? `https://image.thum.io/get/width/800/https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking}`
+    : null;
+  const { error } = await sb.from("orders").update({
+    status: "delivered",
+    delivered_at: new Date().toISOString(),
+    delivery_screenshot: screenshotUrl
+  }).eq("order_no", req.params.id);
+  if (error) return res.status(500).json({ error: error.message });
+  res.json({ ok: true, screenshot: screenshotUrl });
 });
 
 // ── Health check ──────────────────────────────────────────────────────────────

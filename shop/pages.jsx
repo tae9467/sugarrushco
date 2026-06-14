@@ -917,7 +917,7 @@ function ProductsTab({ secret }) {
   );
 }
 
-function OrderCard({ order, secret, onUpdate, onHide, tracking, setTracking, sending, sent, onSendTracking, showRestore, onRestore }) {
+function OrderCard({ order, secret, onUpdate, onHide, tracking, setTracking, sending, sent, onSendTracking, showRestore, onRestore, onDeliver, showDelivered }) {
   const [editing, setEditing] = usePState(false);
   const [editForm, setEditForm] = usePState({ customer_name: order.customer_name, customer_email: order.customer_email, customer_address: order.customer_address });
   const [saving, setSaving] = usePState(false);
@@ -995,9 +995,23 @@ function OrderCard({ order, secret, onUpdate, onHide, tracking, setTracking, sen
         </div>
       )}
 
-      {!showRestore && (isShipped ? (
-        <div style={{ background:"#d4f7d4", borderRadius:10, padding:"10px 16px", fontSize:14 }}>
-          Tracking sent: <strong>{order.tracking_number}</strong>
+      {!showRestore && !showDelivered && (isShipped ? (
+        <div>
+          <div style={{ background:"#d4f7d4", borderRadius:10, padding:"10px 16px", fontSize:14, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:8 }}>
+            <div>
+              <strong>Tracking:</strong> {order.tracking_number}
+              {order.shipped_at && <span style={{ marginLeft:12, opacity:.6, fontSize:12 }}>Shipped {new Date(order.shipped_at).toLocaleString()}</span>}
+            </div>
+            <div style={{ display:"flex", gap:8 }}>
+              <a href={`https://tools.usps.com/go/TrackConfirmAction?tLabels=${order.tracking_number}`} target="_blank" rel="noopener"
+                className="btn btn--sm btn--ghost" style={{ textDecoration:"none" }}>
+                Track on USPS ↗
+              </a>
+              <button className="btn btn--sm" style={{ background:"#1a6b1a", borderColor:"#1a6b1a" }} onClick={onDeliver}>
+                Mark Delivered
+              </button>
+            </div>
+          </div>
         </div>
       ) : (
         <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
@@ -1013,6 +1027,28 @@ function OrderCard({ order, secret, onUpdate, onHide, tracking, setTracking, sen
           </button>
         </div>
       ))}
+
+      {showDelivered && (
+        <div style={{ marginTop:10 }}>
+          <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginBottom:8 }}>
+            {order.shipped_at && <span style={{ fontSize:13, opacity:.7 }}>📦 Shipped: {new Date(order.shipped_at).toLocaleString()}</span>}
+            {order.delivered_at && <span style={{ fontSize:13, opacity:.7 }}>✅ Delivered: {new Date(order.delivered_at).toLocaleString()}</span>}
+            {order.tracking_number && (
+              <a href={`https://tools.usps.com/go/TrackConfirmAction?tLabels=${order.tracking_number}`} target="_blank" rel="noopener"
+                className="btn btn--sm btn--ghost" style={{ textDecoration:"none" }}>
+                Track on USPS ↗
+              </a>
+            )}
+          </div>
+          {order.delivery_screenshot && (
+            <div style={{ marginTop:8 }}>
+              <p style={{ fontSize:12, opacity:.5, marginBottom:4 }}>Delivery screenshot (USPS page at time of marking delivered)</p>
+              <img src={order.delivery_screenshot} alt="USPS delivery screenshot"
+                style={{ width:"100%", borderRadius:8, border:"2px solid var(--ink)", maxHeight:300, objectFit:"cover", objectPosition:"top" }} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1088,8 +1124,9 @@ function AdminPage({ go }) {
   const [password, setPassword] = usePState("");
   const [secret,   setSecret]   = usePState("");
   const [tab,      setTab]      = usePState("orders");
-  const [orders,   setOrders]   = usePState([]);
-  const [hiddenOrders,  setHiddenOrders]  = usePState([]);
+  const [orders,          setOrders]          = usePState([]);
+  const [hiddenOrders,    setHiddenOrders]    = usePState([]);
+  const [deliveredOrders, setDeliveredOrders] = usePState([]);
   const [loading,  setLoading]  = usePState(false);
   const [err,      setErr]      = usePState("");
   const [tracking, setTracking] = usePState({});
@@ -1112,9 +1149,10 @@ function AdminPage({ go }) {
     setErr("");
     try {
       const hdrs = { "x-admin-secret": pwd || secret };
-      const [main, hidden] = await Promise.all([
+      const [main, hidden, delivered] = await Promise.all([
         fetch(SERVER_URL + "/orders", { headers: hdrs }).then((r) => r.json()),
         fetch(SERVER_URL + "/orders?hidden=true", { headers: hdrs }).then((r) => r.json()),
+        fetch(SERVER_URL + "/orders?delivered=true", { headers: hdrs }).then((r) => r.json()),
       ]);
       if (main.error) throw new Error(main.error);
       setOrders((prev) => {
@@ -1125,6 +1163,7 @@ function AdminPage({ go }) {
         return main;
       });
       setHiddenOrders(Array.isArray(hidden) ? hidden : []);
+      setDeliveredOrders(Array.isArray(delivered) ? delivered : []);
     } catch (e) {
       setErr("Could not load orders: " + e.message);
     }
@@ -1156,6 +1195,14 @@ function AdminPage({ go }) {
     setSending((s) => ({ ...s, [key]: false }));
   };
 
+  const deliverOrder = async (order) => {
+    const res = await fetch(SERVER_URL + "/admin/orders/" + order.order_no + "/deliver", {
+      method: "POST", headers: { "x-admin-secret": secret }
+    });
+    if (res.ok) fetchOrders();
+    else { const d = await res.json(); setErr("Error: " + (d.error || "Failed")); }
+  };
+
   const hideOrder = async (order) => {
     await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
       method: "PUT", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
@@ -1179,6 +1226,7 @@ function AdminPage({ go }) {
   const orderCardProps = (order, extra) => ({
     order, secret, onUpdate: updateOrder,
     onHide: () => hideOrder(order),
+    onDeliver: () => deliverOrder(order),
     tracking, setTracking, sending, sent,
     onSendTracking: sendTracking,
     ...extra
@@ -1203,10 +1251,11 @@ function AdminPage({ go }) {
   );
 
   const TABS = [
-    ["orders",   "📦 Orders"],
-    ["products", "🛍️ Products"],
-    ["hidden",   "👁️ Hidden"],
-    ["deleted",  "🗑️ Deleted"],
+    ["orders",    "📦 Orders"],
+    ["products",  "🛍️ Products"],
+    ["delivered", "✅ Delivered"],
+    ["hidden",    "👁️ Hidden"],
+    ["deleted",   "🗑️ Deleted"],
   ];
 
   return (
@@ -1232,6 +1281,16 @@ function AdminPage({ go }) {
       </div>
 
       {tab === "products" && <ProductsTab secret={secret} />}
+
+      {tab === "delivered" && (
+        <div>
+          <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 20px" }}>Delivered Orders</h3>
+          {deliveredOrders.length === 0 && <p style={{ opacity:.5 }}>No delivered orders yet.</p>}
+          {deliveredOrders.map((order) => (
+            <OrderCard key={order.order_no} {...orderCardProps(order, { showDelivered: true })} />
+          ))}
+        </div>
+      )}
 
       {tab === "hidden" && (
         <div>
