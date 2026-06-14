@@ -1065,7 +1065,7 @@ function AdminPage({ go }) {
           }}>
             <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
               <div>
-                <span style={{ fontFamily:"var(--disp)", fontWeight:700, fontSize:18 }}>{order.order_no}</span>
+                <span style={{ fontFamily:"var(--disp)", fontWeight:700, fontSize:18 }}>{order.order_ref || order.order_no}</span>
                 <span style={{
                   marginLeft:12, fontSize:12, fontWeight:700, textTransform:"uppercase",
                   letterSpacing:".06em", padding:"3px 10px", borderRadius:99,

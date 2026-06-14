@@ -41,7 +41,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     if (!orderNo) { console.error("Webhook: no order_no in metadata"); return res.json({ received: true }); }
 
     // Look up the pre-saved pending order — all data already verified server-side
-    const { data: existing } = await sb.from("orders").select("*").eq("order_no", orderNo).single();
+    const { data: existing } = await sb.from("orders").select("*").eq("order_ref", orderNo).single();
     if (!existing) { console.error("Webhook: pending order not found:", orderNo); return res.json({ received: true }); }
 
     // Mark paid and record Stripe payment ID
@@ -49,7 +49,7 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
       status:            "paid",
       stripe_payment_id: session.payment_intent,
       total:             session.amount_total / 100
-    }).eq("order_no", orderNo);
+    }).eq("order_ref", orderNo);
 
     // Decrement stock using the verified items we saved at checkout time
     try {
@@ -128,7 +128,7 @@ app.post("/create-checkout", async (req, res) => {
     // 2. Save verified order to Supabase as "pending" BEFORE sending to Stripe
     //    Webhook will update this to "paid" — no frontend data touches fulfillment
     await sb.from("orders").insert({
-      order_no:         orderNo,
+      order_ref:        orderNo,
       customer_name:    form.name,
       customer_email:   form.email,
       customer_address: customerAddress,
