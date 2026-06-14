@@ -11,6 +11,22 @@ const mail = new Resend(process.env.RESEND_API_KEY);
 
 const ADMIN_SECRET  = process.env.ADMIN_SECRET;
 if (!ADMIN_SECRET) throw new Error("ADMIN_SECRET environment variable is not set!");
+
+// Comma-separated IPs in ADMIN_IP_WHITELIST env var, e.g. "1.2.3.4,5.6.7.8"
+const RAW_WHITELIST = process.env.ADMIN_IP_WHITELIST || "";
+const IP_WHITELIST  = RAW_WHITELIST.split(",").map((s) => s.trim()).filter(Boolean);
+
+function getClientIP(req) {
+  const forwarded = req.headers["x-forwarded-for"];
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return req.socket.remoteAddress || "";
+}
+
+function ipAllowed(req) {
+  if (IP_WHITELIST.length === 0) return true; // no whitelist set = open
+  const ip = getClientIP(req);
+  return IP_WHITELIST.includes(ip);
+}
 const FROM_EMAIL    = process.env.FROM_EMAIL    || "info@sugarrushco.shop";
 const SHOP_NAME     = "Sugar Rush Co.";
 
@@ -104,6 +120,7 @@ app.use("/create-checkout", publicLimiter);
 
 // ── Admin auth middleware ─────────────────────────────────────────────────────
 function adminAuth(req, res, next) {
+  if (!ipAllowed(req)) return res.status(403).json({ error: "Not allowed." });
   const token = req.headers["x-admin-secret"];
   if (!token || token.length < 8 || token !== ADMIN_SECRET) {
     return res.status(401).json({ error: "Unauthorized" });
@@ -111,8 +128,15 @@ function adminAuth(req, res, next) {
   next();
 }
 
+// ── ADMIN: GET /admin/ip-check — instant IP whitelist check (no rate limit) ──
+app.get("/admin/ip-check", (req, res) => {
+  if (!ipAllowed(req)) return res.status(403).json({ error: "Not allowed." });
+  res.json({ ok: true });
+});
+
 // ── ADMIN: POST /admin/verify — verify password (rate-limited to 5/10min) ────
 app.post("/admin/verify", (req, res) => {
+  if (!ipAllowed(req)) return res.status(403).json({ error: "Not allowed." });
   const token = req.headers["x-admin-secret"];
   if (!token || token !== ADMIN_SECRET) return res.status(401).json({ error: "Wrong password." });
   res.json({ ok: true });

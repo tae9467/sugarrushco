@@ -1254,7 +1254,7 @@ function ReviewsTab({ secret }) {
 }
 
 function AdminPage({ go }) {
-  const [authed,    setAuthed]    = usePState(false);
+  const [authed,    setAuthed]    = usePState("checking");
   const [password,  setPassword]  = usePState("");
   const [secret,    setSecret]    = usePState("");
   const [failCount, setFailCount] = usePState(0);
@@ -1268,6 +1268,12 @@ function AdminPage({ go }) {
   const [sending,  setSending]  = usePState({});
   const [sent,     setSent]     = usePState({});
   const [newCount, setNewCount] = usePState(0);
+
+  usePEffect(() => {
+    fetch(SERVER_URL + "/admin/ip-check")
+      .then((r) => { if (r.status === 403) setAuthed("busted"); else setAuthed(false); })
+      .catch(() => setAuthed(false));
+  }, []);
 
   const login = async () => {
     if (!password.trim()) { setErr("Enter your password."); return; }
@@ -1394,6 +1400,8 @@ function AdminPage({ go }) {
     onSendTracking: sendTracking,
     ...extra
   });
+
+  if (authed === "checking") return null;
 
   if (authed === "busted") return (
     <div style={{
