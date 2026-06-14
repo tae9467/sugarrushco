@@ -1378,6 +1378,13 @@ function ReviewPage({ token, go }) {
         setOrder(data);
         let parsed = [];
         try { parsed = JSON.parse(data.items_json || "[]"); } catch {}
+        // Fallback: if no items_json, build from items text string
+        if (!parsed.length && data.items) {
+          parsed = data.items.split(",").map((s, i) => ({
+            id: "item-" + i,
+            name: s.replace(/x\d+$/, "").trim()
+          }));
+        }
         setItems(parsed);
         const init = {};
         parsed.forEach((i) => { init[i.id] = { rating:5, body:"", images:[] }; });
@@ -1413,7 +1420,8 @@ function ReviewPage({ token, go }) {
         body: JSON.stringify({ token, reviews: payload })
       });
       if (res.ok) setState("submitted");
-      else { const d = await res.json(); setState("error"); }
+      else if (res.status === 409) setState("already");
+      else { const d = await res.json(); alert("Submission failed: " + (d.error || "Please try again")); setSubmitting(false); return; }
     } catch { setState("error"); }
     setSubmitting(false);
   };
@@ -1433,7 +1441,7 @@ function ReviewPage({ token, go }) {
     <div className="confirm-wrap"><div className="confirm">
       <CherryIcon size={40} />
       <h1 className="confirm-h">Oops!</h1>
-      <p className="confirm-sub">This review link is invalid or has expired.</p>
+      <p className="confirm-sub">This review link is invalid or has expired. If you think this is a mistake, please contact us.</p>
       <button className="btn" onClick={() => go("home")}>Back home</button>
     </div></div>
   );
@@ -1443,6 +1451,15 @@ function ReviewPage({ token, go }) {
       <h1 className="confirm-h">Thank you, {order?.customer_name?.split(" ")[0]}!!</h1>
       <p className="confirm-sub">Your review means the world to us. 🍒 It'll show up on the product page shortly.</p>
       <button className="btn" onClick={() => go("shop")}>Keep shopping</button>
+    </div></div>
+  );
+
+  if (state === "ready" && items.length === 0) return (
+    <div className="confirm-wrap"><div className="confirm">
+      <CherryIcon size={40} />
+      <h1 className="confirm-h">Hmm!</h1>
+      <p className="confirm-sub">We couldn't find the products in your order. Please contact us and we'll sort it out!</p>
+      <button className="btn" onClick={() => go("home")}>Back home</button>
     </div></div>
   );
 
