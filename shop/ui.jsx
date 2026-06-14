@@ -122,7 +122,7 @@ function ProductImage({ product, height = 200, radius = 14 }) {
   if (imgSrc) {
     return (
       <div className="pcard-img" style={{ height, borderRadius: radius, overflow: "hidden", background: bg }}>
-        <img src={imgSrc} alt={product.name}
+        <img src={imgSrc} alt={product.name} loading="lazy"
           style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
       </div>
     );

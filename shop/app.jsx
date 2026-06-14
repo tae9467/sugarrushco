@@ -164,6 +164,7 @@ function App() {
       <Footer name={t.shopName} go={go} />
       <CartDrawer open={cartOpen} cart={cart} setQty={setQty} remove={removeLine} subtotal={subtotal}
         onClose={() => setCartOpen(false)} onCheckout={() => go("checkout")} />
+      <CookieBanner />
       <TweaksPanel>
         <TweakSection label="Brand" />
         <TweakText  label="Shop name"    value={t.shopName}     onChange={(v) => setTweak("shopName", v)} />

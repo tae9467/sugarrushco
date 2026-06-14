@@ -26,14 +26,6 @@ function ComingSoonBanner() {
 function ShopPage({ route, go, onAdd }) {
   const cat  = route.cat || "all";
   const list = SHOP_DATA.products.filter((p) => cat === "all" || p.cat === cat);
-
-  if (SHOP_DATA.products.length === 0) return (
-    <div className="rail sec" data-screen-label="Shop">
-      <SectionHead title="The whole sweet shop" />
-      <ComingSoonBanner />
-    </div>
-  );
-
   return (
     <div className="rail sec" data-screen-label="Shop">
       <SectionHead title="The whole sweet shop" />
@@ -47,17 +39,28 @@ function ShopPage({ route, go, onAdd }) {
           </button>
         ))}
       </div>
-      <div className="pgrid">
-        {list.map((p) => <ProductCard key={p.id} p={p} go={go} onAdd={onAdd} showBlurb />)}
-      </div>
-      {list.length === 0 && <ComingSoonBanner />}
+      {list.length === 0 ? <ComingSoonBanner /> : (
+        <div className="pgrid">
+          {list.map((p) => <ProductCard key={p.id} p={p} go={go} onAdd={onAdd} showBlurb />)}
+        </div>
+      )}
     </div>
   );
 }
 
 /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Product page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 function ProductPage({ route, go, onAdd }) {
-  const p     = productById(route.id) || SHOP_DATA.products[0];
+  const p = productById(route.id);
+  if (!p) return (
+    <div className="rail sec" data-screen-label="Product not found">
+      <div style={{ textAlign:"center", padding:"80px 24px" }}>
+        <div style={{ fontSize:52, marginBottom:16 }}>🍒</div>
+        <h2 style={{ fontFamily:"var(--disp)", fontSize:28, margin:"0 0 12px" }}>This one flew off the shelves!</h2>
+        <p style={{ opacity:.6, marginBottom:24 }}>This product isn't available right now — check back on our next Friday drop.</p>
+        <button className="btn" onClick={() => go("shop")}>See what's in the shop</button>
+      </div>
+    </div>
+  );
   const [qty, setQty] = usePState(1);
   const pairs = SHOP_DATA.products.filter((x) => x.id !== p.id && x.cat === p.cat).slice(0, 2);
 
@@ -89,7 +92,7 @@ function ProductPage({ route, go, onAdd }) {
                       padding:0, border: i === activeImg ? "3px solid var(--ink)" : "2px solid transparent",
                       borderRadius:8, cursor:"pointer", background:"none", flexShrink:0
                     }}>
-                      <img src={src} alt="" style={{ width:56, height:56, objectFit:"cover", borderRadius:6, display:"block" }} />
+                      <img src={src} alt="" loading="lazy" style={{ width:56, height:56, objectFit:"cover", borderRadius:6, display:"block" }} />
                     </button>
                   ))}
                 </div>
@@ -301,10 +304,10 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
             {/* Name */}
             <div className="field">
               <label htmlFor="co-name">Full name</label>
-              <input id="co-name" autoComplete="name" placeholder="Your name"
+              <input id="co-name" autoComplete="name" placeholder="Your name" maxLength={80}
                 {...inp("name")}
                 onChange={(ev) => {
-                  const val = ev.target.value.replace(/[^a-zA-Z\s\-'.]/g, "");
+                  const val = ev.target.value.replace(/[^a-zA-Z\s\-'.]/g, "").slice(0, 80);
                   setForm((f) => ({ ...f, name: val }));
                 }} />
               {errs.name && <span className="field-err">{errs.name}</span>}
@@ -313,7 +316,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
             {/* Email */}
             <div className="field">
               <label htmlFor="co-email">Email</label>
-              <input id="co-email" autoComplete="email" placeholder="you@email.com" type="email"
+              <input id="co-email" autoComplete="email" placeholder="you@email.com" type="email" maxLength={120}
                 {...inp("email")} />
               {errs.email && <span className="field-err">{errs.email}</span>}
             </div>
@@ -321,7 +324,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
             {/* Address line 1 with autocomplete */}
             <div className="field field--full" style={{ position:"relative" }}>
               <label htmlFor="co-address">Address line 1</label>
-              <input id="co-address" autoComplete="address-line1" placeholder="123 Sweet St"
+              <input id="co-address" autoComplete="address-line1" placeholder="123 Sweet St" maxLength={100}
                 className={"input" + (errs.address ? " is-bad" : "")}
                 value={form.address}
                 onChange={(ev) => onAddressChange(ev.target.value)}
@@ -349,9 +352,9 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
             {/* Address line 2 */}
             <div className="field field--full">
               <label htmlFor="co-address2">Address line 2 <span style={{ opacity:.5, fontWeight:400 }}>(apt, suite, unit — optional)</span></label>
-              <input id="co-address2" autoComplete="address-line2" placeholder="Apt 210, Suite B, Unit 4..."
+              <input id="co-address2" autoComplete="address-line2" placeholder="Apt 210, Suite B, Unit 4..." maxLength={60}
                 className="input" value={form.address2}
-                onChange={(ev) => setForm((f) => ({ ...f, address2: ev.target.value }))} />
+                onChange={(ev) => setForm((f) => ({ ...f, address2: ev.target.value.slice(0, 60) }))} />
             </div>
 
             {/* City */}
@@ -513,7 +516,7 @@ function ContactPage({ go }) {
     <div className="confirm-wrap" data-screen-label="Message sent">
       <div className="confirm">
         <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." style={{ height:80, objectFit:"contain", marginBottom:8 }} />
-        <h1 className="confirm-h">Order confirmed, sweet!!</h1>
+        <h1 className="confirm-h">Message sent, thank you! 🍒</h1>
         <p className="confirm-sub">We got your note and will get back to you super soon!</p>
         <button className="btn" onClick={() => go("home")}>Back to the shop</button>
       </div>
@@ -740,9 +743,11 @@ function ProductsTab({ secret }) {
   const [loading,  setLoading]  = usePState(false);
   const [err,      setErr]      = usePState("");
   const [form,     setForm]     = usePState(EMPTY_FORM);
-  const [editing,  setEditing]  = usePState(null); // product id being edited
+  const [editing,  setEditing]  = usePState(null);
   const [saving,   setSaving]   = usePState(false);
-  const [stockEdit,setStockEdit]= usePState({}); // { id: newStockValue }
+  const [stockEdit,setStockEdit]= usePState({});
+  const [selected, setSelected] = usePState(new Set());
+  const [bulkBusy, setBulkBusy] = usePState(false);
 
   usePEffect(() => { fetchProducts(); }, []);
 
@@ -814,6 +819,31 @@ function ProductsTab({ secret }) {
     fetchProducts();
   };
 
+  const toggleSelect = (id) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  const selectAll = (ids) => setSelected(new Set(ids));
+  const clearSel = () => setSelected(new Set());
+
+  const bulkHide = async () => {
+    setBulkBusy(true);
+    await Promise.all([...selected].map((id) => {
+      const p = products.find((x) => String(x.id) === String(id));
+      return fetch(SERVER_URL + "/admin/products/" + id, {
+        method:"PUT", headers:{"Content-Type":"application/json","x-admin-secret":secret},
+        body: JSON.stringify({ active: p?.active === false ? true : false })
+      });
+    }));
+    clearSel(); fetchProducts(); setBulkBusy(false);
+  };
+
+  const bulkDelete = async () => {
+    if (!confirm(`Delete ${selected.size} product${selected.size > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    setBulkBusy(true);
+    await Promise.all([...selected].map((id) =>
+      fetch(SERVER_URL + "/admin/products/" + id, { method:"DELETE", headers:{"x-admin-secret":secret} })
+    ));
+    clearSel(); fetchProducts(); setBulkBusy(false);
+  };
+
   const fieldStyle = { display:"flex", flexDirection:"column", gap:4 };
   const labelStyle = { font:"700 12px var(--font-ui)", textTransform:"uppercase", letterSpacing:".05em", opacity:.7 };
 
@@ -877,12 +907,30 @@ function ProductsTab({ secret }) {
       {/* ── Product list ── */}
       {(() => {
         const visible = products.filter((p) => p.active !== false);
-        const hidden  = products.filter((p) => p.active === false);
+        const visibleIds = visible.map((p) => String(p.id));
+        const allSelected = visibleIds.length > 0 && visibleIds.every((id) => selected.has(id));
         return (
           <React.Fragment>
-            <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"28px 0 14px" }}>
-              Active Products ({visible.length})
-            </h3>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10, margin:"28px 0 14px" }}>
+              <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:0 }}>Active Products ({visible.length})</h3>
+              {selected.size > 0 && (
+                <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                  <span style={{ fontSize:13, opacity:.6 }}>{selected.size} selected</span>
+                  <button className="btn btn--sm btn--ghost" onClick={bulkHide} disabled={bulkBusy}>Hide selected</button>
+                  <button className="btn btn--sm" style={{ background:"#c00", borderColor:"#c00" }} onClick={bulkDelete} disabled={bulkBusy}>Delete selected</button>
+                  <button className="btn btn--sm btn--ghost" onClick={clearSel}>Clear</button>
+                </div>
+              )}
+            </div>
+            {visible.length > 1 && (
+              <div style={{ marginBottom:10 }}>
+                <label style={{ fontSize:13, cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                  <input type="checkbox" checked={allSelected}
+                    onChange={() => allSelected ? clearSel() : selectAll(visibleIds)} />
+                  Select all
+                </label>
+              </div>
+            )}
             {loading && <p style={{ opacity:.6 }}>Loading…</p>}
             {visible.map((p) => {
               const isHidden = p.active === false;
@@ -890,14 +938,19 @@ function ProductsTab({ secret }) {
               const isLow  = p.stock > 0 && p.stock <= 10;
               let thumb = p.image_url || "";
               if (!thumb && p.images) { try { thumb = JSON.parse(p.images)[0] || ""; } catch {} }
+              const pid = String(p.id);
               return (
                 <div key={p.id} style={{ ...CARD_STYLE, opacity: isHidden ? .55 : isOos ? .8 : 1,
-                  borderColor: isHidden ? "#aaa" : "var(--ink)" }}>
-                  {isHidden && (
-                    <div style={{ background:"#f0f0f0", color:"#666", fontSize:11, fontWeight:700,
-                      textTransform:"uppercase", letterSpacing:".08em", padding:"3px 10px", borderRadius:6,
-                      display:"inline-block", marginBottom:10 }}>Hidden from shop</div>
-                  )}
+                  borderColor: selected.has(pid) ? "var(--acc2)" : isHidden ? "#aaa" : "var(--ink)" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
+                    <input type="checkbox" checked={selected.has(pid)}
+                      onChange={() => toggleSelect(pid)}
+                      style={{ width:16, height:16, cursor:"pointer" }} />
+                    {isHidden && (
+                      <div style={{ background:"#f0f0f0", color:"#666", fontSize:11, fontWeight:700,
+                        textTransform:"uppercase", letterSpacing:".08em", padding:"3px 10px", borderRadius:6 }}>Hidden from shop</div>
+                    )}
+                  </div>
                   <div style={{ display:"flex", gap:14, alignItems:"flex-start", flexWrap:"wrap" }}>
                     {thumb && <img src={thumb} alt={p.name} style={{ width:70, height:70, objectFit:"cover", borderRadius:10, border:"2px solid var(--ink)", flexShrink:0 }} />}
                     <div style={{ flex:1, minWidth:200 }}>
@@ -952,8 +1005,22 @@ function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTra
   const [editing, setEditing] = usePState(false);
   const [editForm, setEditForm] = usePState({ customer_name: order.customer_name, customer_email: order.customer_email, customer_address: order.customer_address });
   const [saving, setSaving] = usePState(false);
+  const [sendingReview, setSendingReview] = usePState(false);
+  const [reviewSent, setReviewSent] = usePState(false);
   const isShipped = order.tracking_sent || order.status === "shipped";
   const key = order.order_no;
+
+  const sendReviewInvite = async () => {
+    setSendingReview(true);
+    try {
+      const res = await fetch(SERVER_URL + "/admin/orders/" + order.order_no + "/send-review", {
+        method: "POST", headers: { "x-admin-secret": secret }
+      });
+      const d = await res.json();
+      if (!res.ok) { alert(d.error || "Failed"); } else { setReviewSent(true); }
+    } catch(e) { alert("Error: " + e.message); }
+    setSendingReview(false);
+  };
 
   const saveEdit = async () => {
     setSaving(true);
@@ -979,6 +1046,12 @@ function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTra
             background: isShipped ? "#d4f7d4" : order.status === "pending" ? "#e8e8e8" : "#fff3cd",
             color:      isShipped ? "#1a6b1a" : order.status === "pending" ? "#555" : "#7a5800"
           }}>{order.status || "paid"}</span>
+          {order.review_submitted && (
+            <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:99, background:"#f8f4ff", color:"#9B72D8", border:"1px solid #C9AAEB" }}>⭐ reviewed</span>
+          )}
+          {order.review_token && !order.review_submitted && order.status === "delivered" && (
+            <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:99, background:"#fff3cd", color:"#7a5800" }}>no review yet</span>
+          )}
         </div>
         <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
           <span style={{ fontSize:13, opacity:.55 }}>{order.created_at ? new Date(order.created_at).toLocaleDateString() : ""}</span>
@@ -1079,8 +1152,15 @@ function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTra
           {order.delivery_screenshot && (
             <div style={{ marginTop:8 }}>
               <p style={{ fontSize:12, opacity:.5, marginBottom:4 }}>Delivery screenshot (USPS page at time of marking delivered)</p>
-              <img src={order.delivery_screenshot} alt="USPS delivery screenshot"
+              <img src={order.delivery_screenshot} alt="USPS delivery screenshot" loading="lazy"
                 style={{ width:"100%", borderRadius:8, border:"2px solid var(--ink)", maxHeight:300, objectFit:"cover", objectPosition:"top" }} />
+            </div>
+          )}
+          {!order.review_submitted && order.review_token && (
+            <div style={{ marginTop:12 }}>
+              <button className="btn btn--sm btn--ghost" disabled={sendingReview || reviewSent} onClick={sendReviewInvite}>
+                {sendingReview ? "Sending…" : reviewSent ? "Review invite sent! ✓" : "✉️ Send review invite"}
+              </button>
             </div>
           )}
         </div>
@@ -1164,6 +1244,8 @@ function ReviewsTab({ secret }) {
   const [replying,  setReplying]  = usePState({});
   const [replySent, setReplySent] = usePState({});
   const [deleting,  setDeleting]  = usePState({});
+  const [filterProduct, setFilterProduct] = usePState("all");
+  const [filterRating,  setFilterRating]  = usePState("all");
 
   const load = async () => {
     setLoading(true); setErr("");
@@ -1209,15 +1291,39 @@ function ReviewsTab({ secret }) {
 
   if (loading) return <p style={{ opacity:.6 }}>Loading reviews…</p>;
 
+  const productNames = [...new Set(reviews.map((r) => r.product_name).filter(Boolean))];
+  const filtered = reviews.filter((r) => {
+    if (filterProduct !== "all" && r.product_name !== filterProduct) return false;
+    if (filterRating  !== "all" && String(r.rating) !== filterRating)  return false;
+    return true;
+  });
+
   return (
     <div>
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:12, flexWrap:"wrap", gap:10 }}>
         <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:0 }}>All Reviews ({reviews.length})</h3>
         <button className="btn btn--sm btn--ghost" onClick={load}>Refresh</button>
       </div>
+      {reviews.length > 0 && (
+        <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap" }}>
+          <select className="input" value={filterProduct} onChange={(e) => setFilterProduct(e.target.value)}
+            style={{ padding:"8px 14px", fontSize:14 }}>
+            <option value="all">All products</option>
+            {productNames.map((n) => <option key={n} value={n}>{n}</option>)}
+          </select>
+          <select className="input" value={filterRating} onChange={(e) => setFilterRating(e.target.value)}
+            style={{ padding:"8px 14px", fontSize:14 }}>
+            <option value="all">All ratings</option>
+            {[5,4,3,2,1].map((n) => <option key={n} value={String(n)}>{"★".repeat(n)} {n} star{n !== 1 ? "s" : ""}</option>)}
+          </select>
+          {(filterProduct !== "all" || filterRating !== "all") && (
+            <button className="btn btn--sm btn--ghost" onClick={() => { setFilterProduct("all"); setFilterRating("all"); }}>Clear filters</button>
+          )}
+        </div>
+      )}
       {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:8, padding:"10px 14px", marginBottom:14, color:"#900", fontSize:14 }}>{err}</div>}
-      {reviews.length === 0 && <p style={{ opacity:.5 }}>No reviews yet.</p>}
-      {reviews.map((r) => {
+      {filtered.length === 0 && <p style={{ opacity:.5 }}>{reviews.length === 0 ? "No reviews yet." : "No reviews match your filters."}</p>}
+      {filtered.map((r) => {
         let imgs = [];
         try { imgs = JSON.parse(r.images || "[]"); } catch {}
         const hasReply = r.reply;
@@ -1281,6 +1387,59 @@ function ReviewsTab({ secret }) {
       })}
     </div>
   );
+}
+
+/* ── Orders toolbar: search, status filter, CSV export ── */
+function OrdersToolbar({ orders }) {
+  const [search, setSearch] = usePState("");
+  const [status, setStatus] = usePState("all");
+
+  const exportCSV = () => {
+    const cols = ["Order #","Name","Email","Address","Items","Total","Status","Date"];
+    const rows = orders.map((o) => [
+      o.order_ref || o.order_no, o.customer_name, o.customer_email,
+      o.customer_address, o.items, o.total, o.status,
+      o.created_at ? new Date(o.created_at).toLocaleDateString() : ""
+    ]);
+    const csv = [cols, ...rows].map((r) => r.map((v) => `"${String(v||"").replace(/"/g,'""')}"`).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+    a.download = "orders-" + new Date().toISOString().slice(0,10) + ".csv";
+    a.click();
+  };
+
+  // Expose filter state globally so OrdersList can read it
+  window._orderFilter = { search: search.toLowerCase(), status };
+
+  return (
+    <div style={{ display:"flex", gap:10, marginBottom:18, flexWrap:"wrap", alignItems:"center" }}>
+      <input className="input" placeholder="Search name, email, order #…" value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        style={{ flex:1, minWidth:200, padding:"8px 14px", fontSize:14 }} />
+      <select className="input" value={status} onChange={(e) => setStatus(e.target.value)}
+        style={{ padding:"8px 14px", fontSize:14 }}>
+        <option value="all">All statuses</option>
+        <option value="pending">Pending</option>
+        <option value="paid">Paid</option>
+        <option value="shipped">Shipped</option>
+      </select>
+      <button className="btn btn--sm btn--ghost" onClick={exportCSV}>⬇ Export CSV</button>
+    </div>
+  );
+}
+
+function OrdersList({ orders, orderCardProps }) {
+  const f = window._orderFilter || { search: "", status: "all" };
+  const filtered = orders.filter((o) => {
+    if (f.status !== "all" && o.status !== f.status) return false;
+    if (f.search) {
+      const hay = [o.order_ref, o.order_no, o.customer_name, o.customer_email].join(" ").toLowerCase();
+      if (!hay.includes(f.search)) return false;
+    }
+    return true;
+  });
+  if (filtered.length === 0) return <p style={{ opacity:.5, textAlign:"center", padding:"30px 0" }}>No orders match your search.</p>;
+  return filtered.map((order) => <OrderCard key={order.order_no} {...orderCardProps(order)} />);
 }
 
 function AdminPage({ go }) {
@@ -1549,6 +1708,10 @@ function AdminPage({ go }) {
             </div>
           )}
           {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:10, padding:"12px 16px", marginBottom:20, color:"#900" }}>{err}</div>}
+          {/* Search + filter + CSV */}
+          {orders.length > 0 && (
+            <OrdersToolbar orders={orders} />
+          )}
           {loading && <p style={{ textAlign:"center", opacity:.6 }}>Loading orders...</p>}
           {!loading && orders.length === 0 && (
             <div style={{ textAlign:"center", opacity:.55, padding:"60px 0" }}>
@@ -1556,9 +1719,7 @@ function AdminPage({ go }) {
               <p style={{ marginTop:14 }}>No orders yet — they'll show up here once Stripe payments come in.</p>
             </div>
           )}
-          {orders.map((order) => (
-            <OrderCard key={order.order_no} {...orderCardProps(order)} />
-          ))}
+          <OrdersList orders={orders} orderCardProps={orderCardProps} />
         </React.Fragment>
       )}
     </div>
@@ -1805,7 +1966,30 @@ function ProductReviews({ productId }) {
   );
 }
 
-Object.assign(window, { ShopPage, ProductPage, CartDrawer, CheckoutPage, ConfirmPage, ContactPage, TermsPage, RefundPage, AdminPage, ReviewPage });
+/* ── Cookie consent banner ── */
+function CookieBanner() {
+  const [hidden, setHidden] = usePState(() => {
+    try { return localStorage.getItem("sr.cookies") === "1"; } catch { return false; }
+  });
+  if (hidden) return null;
+  const accept = () => { try { localStorage.setItem("sr.cookies", "1"); } catch {} setHidden(true); };
+  return (
+    <div style={{
+      position:"fixed", bottom:0, left:0, right:0, zIndex:10000,
+      background:"var(--ink)", color:"var(--tld-white)",
+      padding:"14px 24px", display:"flex", alignItems:"center", justifyContent:"space-between",
+      gap:16, flexWrap:"wrap", fontSize:13
+    }}>
+      <p style={{ margin:0, lineHeight:1.5 }}>
+        🍪 We use cookies to keep your cart and remember your preferences. By continuing to browse you agree to our{" "}
+        <button onClick={() => {}} style={{ color:"var(--acc3)", background:"none", border:"none", cursor:"pointer", fontSize:13, textDecoration:"underline", padding:0 }}>cookie use</button>.
+      </p>
+      <button className="btn btn--sm" onClick={accept} style={{ flexShrink:0, background:"var(--acc)", borderColor:"var(--acc)", color:"var(--ink)" }}>Got it</button>
+    </div>
+  );
+}
+
+Object.assign(window, { ShopPage, ProductPage, CartDrawer, CheckoutPage, ConfirmPage, ContactPage, TermsPage, RefundPage, AdminPage, ReviewPage, CookieBanner });
 
 
 

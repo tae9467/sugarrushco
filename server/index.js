@@ -85,6 +85,12 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
   res.json({ received: true });
 });
 
+// ── HSTS — tell browsers to always use HTTPS ─────────────────────────────────
+app.use((req, res, next) => {
+  res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
+  next();
+});
+
 // ── JSON body for all other routes ───────────────────────────────────────────
 app.use(express.json());
 
@@ -579,6 +585,36 @@ app.post("/admin/reviews/:id/reply", adminAuth, async (req, res) => {
     }).catch((e) => console.error("Reply email error:", e.message));
   }
 
+  res.json({ ok: true });
+});
+
+// ── ADMIN: POST /admin/orders/:id/send-review — manual review invite ──────────
+app.post("/admin/orders/:id/send-review", adminAuth, async (req, res) => {
+  const { data: orders } = await sb.from("orders").select("*").eq("order_no", req.params.id).limit(1);
+  if (!orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
+  const order = orders[0];
+  if (!order.review_token) return res.status(400).json({ error: "No review token — mark as delivered first" });
+  if (order.review_submitted) return res.status(400).json({ error: "Customer already submitted a review" });
+  const reviewUrl = `https://sugarrushco.shop/?review=${order.review_token}`;
+  await mail.emails.send({
+    from: `${SHOP_NAME} <${FROM_EMAIL}>`,
+    to: order.customer_email,
+    subject: `How did you like your Sugar Rush Co. order? 🍒`,
+    html: `
+      <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#29261b;">
+        <div style="background:repeating-linear-gradient(90deg,#C9AAEB 0 46px,#fff 46px 92px);height:60px;border-radius:12px 12px 0 0;"></div>
+        <div style="border:3px solid #29261b;border-top:none;border-radius:0 0 16px 16px;padding:36px 40px;">
+          <h1 style="font-size:26px;margin:0 0 8px;">We'd love your review! 🎀</h1>
+          <p style="margin:0 0 20px;font-size:16px;">Hi ${order.customer_name}, we hope you're loving your goodies!</p>
+          <p style="margin:0 0 24px;font-size:15px;font-weight:700;color:#9B72D8;">🎁 Leave a review and get 10% off your next order!</p>
+          <a href="${reviewUrl}" style="display:block;text-align:center;background:#C9AAEB;color:#29261b;text-decoration:none;padding:16px 28px;border-radius:99px;font-size:16px;font-weight:700;margin-bottom:24px;border:3px solid #29261b;">
+            Leave a review ✨
+          </a>
+          <p style="font-size:12px;opacity:.5;margin:0;text-align:center;">This link is unique to your order and can only be used once.</p>
+        </div>
+      </div>
+    `
+  });
   res.json({ ok: true });
 });
 
