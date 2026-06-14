@@ -968,26 +968,27 @@ function AdminPage({ go }) {
   }, [authed, secret]);
 
   const sendTracking = async (order) => {
-    const num = (tracking[order.id] || "").trim();
+    const key = order.order_no;
+    const num = (tracking[key] || "").trim();
     if (!num) return;
-    setSending((s) => ({ ...s, [order.id]: true }));
+    setSending((s) => ({ ...s, [key]: true }));
     setErr("");
     try {
       const res = await fetch(SERVER_URL + "/track", {
         method:  "POST",
         headers: { "Content-Type": "application/json", "x-admin-secret": secret },
-        body:    JSON.stringify({ order_id: order.id, tracking_number: num })
+        body:    JSON.stringify({ order_id: order.order_no, tracking_number: num })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
-      setSent((s) => ({ ...s, [order.id]: true }));
+      setSent((s) => ({ ...s, [key]: true }));
       setOrders((prev) => prev.map((o) =>
-        o.id === order.id ? { ...o, tracking_number: num, tracking_sent: true, status: "shipped" } : o
+        o.order_no === order.order_no ? { ...o, tracking_number: num, tracking_sent: true, status: "shipped" } : o
       ));
     } catch (e) {
       setErr("Error: " + e.message);
     }
-    setSending((s) => ({ ...s, [order.id]: false }));
+    setSending((s) => ({ ...s, [key]: false }));
   };
 
   if (!authed) return (
@@ -1058,7 +1059,7 @@ function AdminPage({ go }) {
       {orders.map((order) => {
         const isShipped = order.tracking_sent || order.status === "shipped";
         return (
-          <div key={order.id} style={{
+          <div key={order.order_no} style={{
             border: "3px solid var(--ink)", borderRadius: 16, padding: "22px 26px",
             marginBottom: 18, background: "var(--tld-white)",
             boxShadow: "var(--tld-shadow)"
@@ -1092,13 +1093,13 @@ function AdminPage({ go }) {
               <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
                 <input className="input" style={{ flex:1, minWidth:200, maxWidth:340 }}
                   placeholder="USPS tracking number"
-                  value={tracking[order.id] || ""}
-                  onChange={(e) => setTracking((t) => ({ ...t, [order.id]: e.target.value }))} />
+                  value={tracking[order.order_no] || ""}
+                  onChange={(e) => setTracking((t) => ({ ...t, [order.order_no]: e.target.value }))} />
                 <button className="btn btn--sm"
-                  disabled={sending[order.id] || sent[order.id]}
-                  style={(sending[order.id] || sent[order.id]) ? { opacity:.65 } : null}
+                  disabled={sending[order.order_no] || sent[order.order_no]}
+                  style={(sending[order.order_no] || sent[order.order_no]) ? { opacity:.65 } : null}
                   onClick={() => sendTracking(order)}>
-                  {sending[order.id] ? "Sending…" : sent[order.id] ? "Sent!" : "Send tracking email"}
+                  {sending[order.order_no] ? "Sending…" : sent[order.order_no] ? "Sent!" : "Send tracking email"}
                 </button>
               </div>
             )}
