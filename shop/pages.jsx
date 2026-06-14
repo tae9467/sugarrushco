@@ -997,7 +997,7 @@ function AdminPage({ go }) {
         <h1 className="confirm-h" style={{ fontSize: 22 }}>Admin login</h1>
         <div className="field" style={{ width: "100%", marginBottom: 14 }}>
           <input className={"input" + (err ? " is-bad" : "")} type="password"
-            placeholder="Password" value={password}
+            placeholder="Password" value={password} autoComplete="off"
             onChange={(e) => setPassword(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter") login(); }} />
           {err && <span className="field-err">{err}</span>}

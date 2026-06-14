@@ -92,6 +92,7 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("payment") === "success") {
       window.history.replaceState({}, "", window.location.pathname);
+      localStorage.removeItem(CART_KEY);
       return { name: "confirm" };
     }
     if (params.get("admin") === "1") {
