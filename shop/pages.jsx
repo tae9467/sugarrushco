@@ -1976,14 +1976,18 @@ function CookieBanner() {
   const decline = () => { try { localStorage.setItem("sr.cookies", "no");  } catch {} setHidden(true); };
   return (
     <div style={{
-      position:"fixed", bottom:16, left:"50%", transform:"translateX(-50%)",
-      zIndex:10000, width:"calc(100% - 32px)", maxWidth:620,
+      position:"fixed", bottom:16, left:0, right:0,
+      display:"flex", justifyContent:"center",
+      zIndex:10000, pointerEvents:"none"
+    }}>
+    <div style={{
+      pointerEvents:"auto",
+      width:"calc(100% - 32px)", maxWidth:620,
       background:"var(--ink)", color:"var(--tld-white)",
       padding:"14px 18px", borderRadius:12,
       display:"flex", alignItems:"center", justifyContent:"space-between",
       gap:12, flexWrap:"wrap", fontSize:13,
-      boxShadow:"0 4px 24px rgba(0,0,0,.3)",
-      pointerEvents:"auto"
+      boxShadow:"0 4px 24px rgba(0,0,0,.3)"
     }}>
       <p style={{ margin:0, lineHeight:1.5, flex:1, minWidth:200 }}>
         🍪 We use cookies to keep your cart and preferences. Essential cookies only — no tracking.
@@ -2000,6 +2004,7 @@ function CookieBanner() {
           fontSize:13, cursor:"pointer", fontWeight:700
         }}>Accept</button>
       </div>
+    </div>
     </div>
   );
 }

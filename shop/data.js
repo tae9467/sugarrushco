@@ -8,7 +8,7 @@ window.SHOP_DATA = {
     { id: "perfume",      label: "Perfume",       icon: "perfume" }
   ],
 
-  products: [
+  products: [ /* populated from server on load — see app.jsx */
     { id: "gloss-strawberry", cat: "lipgloss", name: "Strawberry Shortcake Gloss", price: 8, stock: 10,
       blurb: "High-shine, non-sticky, and it smells exactly like the dessert. Dangerous.",
       notes: ["strawberry", "whipped cream", "vanilla sponge"],

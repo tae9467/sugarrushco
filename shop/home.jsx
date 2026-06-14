@@ -12,10 +12,10 @@ function HomeStorefront({ t, tone, go, onAdd }) {
           <Awning awning={t.awning} name={t.shopName} />
           <div className="window-card">
             {featured.length === 0 ? (
-              <div style={{ textAlign:"center", padding:"40px 24px", color:"var(--tld-white)" }}>
+              <div style={{ textAlign:"center", padding:"40px 24px", color:"var(--ink)" }}>
                 <div style={{ fontSize:40, marginBottom:12 }}>🍒</div>
                 <p style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 8px" }}>New drop coming soon!</p>
-                <p style={{ fontSize:13, opacity:.7, margin:0 }}>New goodies every other Friday</p>
+                <p style={{ fontSize:13, opacity:.6, margin:0 }}>New goodies every other Friday</p>
               </div>
             ) : (
               <div className="window-row">

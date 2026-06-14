@@ -60,8 +60,10 @@ function App() {
   const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
   const [productsLoaded, setProductsLoaded] = useAState(false);
 
-  // Load products from server on startup, fall back to hardcoded data.js
+  // Load products from server on startup — clear hardcoded fallback immediately so nothing flashes
   useAEffect(() => {
+    SHOP_DATA.products = [];
+    SHOP_DATA.featured = [];
     fetch((window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com") + "/products")
       .then((r) => r.json())
       .then((data) => {
