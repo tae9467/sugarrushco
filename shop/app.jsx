@@ -167,6 +167,9 @@ function App() {
 
   return (
     <div className={"shop-root" + (route.name === "contact" ? " is-contact" : "")} style={themeVars}>
+      {/* Hidden image cache — keeps both logos decoded in memory so they never flash when needed */}
+      <img src="shop/assets/logo-footer.png" alt="" aria-hidden="true" style={{ display:"none" }} />
+      <img src="shop/assets/logo-header.png" alt="" aria-hidden="true" style={{ display:"none" }} />
       <Header name={t.shopName} route={route} go={go} cartCount={cartCount} openCart={() => setCartOpen(true)} />
       <main className="page" key={route.name + (route.id || "") + (route.cat || "")}>{page}</main>
       <div className="scallop scallop--up" style={{ "--sc": route.name === "contact" ? "#000" : "var(--acc)" }}></div>
