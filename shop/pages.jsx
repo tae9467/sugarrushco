@@ -54,7 +54,7 @@ function ProductPage({ route, go, onAdd }) {
   if (!p) return (
     <div className="rail sec" data-screen-label="Product not found">
       <div style={{ textAlign:"center", padding:"80px 24px" }}>
-        <div style={{ fontSize:52, marginBottom:16 }}>🍒</div>
+        <div style={{ fontSize:52, marginBottom:16 }}>💜</div>
         <h2 style={{ fontFamily:"var(--disp)", fontSize:28, margin:"0 0 12px" }}>This one flew off the shelves!</h2>
         <p style={{ opacity:.6, marginBottom:24 }}>This product isn't available right now — check back on our next Friday drop.</p>
         <button className="btn" onClick={() => go("shop")}>See what's in the shop</button>
@@ -516,7 +516,7 @@ function ContactPage({ go }) {
     <div className="confirm-wrap" data-screen-label="Message sent">
       <div className="confirm">
         <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." style={{ height:80, objectFit:"contain", marginBottom:8 }} />
-        <h1 className="confirm-h">Message sent, thank you! 🍒</h1>
+        <h1 className="confirm-h">Message sent, thank you! 💜</h1>
         <p className="confirm-sub">We got your note and will get back to you super soon!</p>
         <button className="btn" onClick={() => go("home")}>Back to the shop</button>
       </div>
@@ -852,7 +852,7 @@ function ProductsTab({ secret }) {
       {/* ── Add / Edit form ── */}
       <div style={CARD_STYLE}>
         <h3 style={{ margin:"0 0 18px", fontFamily:"var(--disp)", fontSize:20 }}>
-          {editing ? "✏️ Edit Product" : "➕ Add New Product"}
+          {editing ? "Edit Product" : "Add New Product"}
         </h3>
         {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:8, padding:"10px 14px", marginBottom:14, color:"#900", fontSize:14 }}>{err}</div>}
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
@@ -1047,7 +1047,7 @@ function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTra
             color:      isShipped ? "#1a6b1a" : order.status === "pending" ? "#555" : "#7a5800"
           }}>{order.status || "paid"}</span>
           {order.review_submitted && (
-            <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:99, background:"#f8f4ff", color:"#9B72D8", border:"1px solid #C9AAEB" }}>⭐ reviewed</span>
+            <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:99, background:"#f8f4ff", color:"#9B72D8", border:"1px solid #C9AAEB" }}>💜 reviewed</span>
           )}
           {order.review_token && !order.review_submitted && order.status === "delivered" && (
             <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:99, background:"#fff3cd", color:"#7a5800" }}>no review yet</span>
@@ -1140,8 +1140,8 @@ function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTra
       {showDelivered && (
         <div style={{ marginTop:10 }}>
           <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap", marginBottom:8 }}>
-            {order.shipped_at && <span style={{ fontSize:13, opacity:.7 }}>📦 Shipped: {new Date(order.shipped_at).toLocaleString()}</span>}
-            {order.delivered_at && <span style={{ fontSize:13, opacity:.7 }}>✅ Delivered: {new Date(order.delivered_at).toLocaleString()}</span>}
+            {order.shipped_at && <span style={{ fontSize:13, opacity:.7 }}>Shipped: {new Date(order.shipped_at).toLocaleString()}</span>}
+            {order.delivered_at && <span style={{ fontSize:13, opacity:.7 }}>Delivered: {new Date(order.delivered_at).toLocaleString()}</span>}
             {order.tracking_number && (
               <a href={`https://tools.usps.com/go/TrackConfirmAction?tLabels=${order.tracking_number}`} target="_blank" rel="noopener"
                 className="btn btn--sm btn--ghost" style={{ textDecoration:"none" }}>
@@ -1159,7 +1159,7 @@ function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTra
           {!order.review_submitted && order.review_token && (
             <div style={{ marginTop:12 }}>
               <button className="btn btn--sm btn--ghost" disabled={sendingReview || reviewSent} onClick={sendReviewInvite}>
-                {sendingReview ? "Sending…" : reviewSent ? "Review invite sent! ✓" : "✉️ Send review invite"}
+                {sendingReview ? "Sending…" : reviewSent ? "Review invite sent! ✓" : "Send review invite"}
               </button>
             </div>
           )}
@@ -1604,7 +1604,7 @@ function AdminPage({ go }) {
         padding: "48px 40px", maxWidth: 420, textAlign: "center",
         boxShadow: "8px 8px 0 #29261b", margin: "0 16px"
       }}>
-        <div style={{ fontSize: 64, marginBottom: 8 }}>🃏</div>
+        <div style={{ fontSize: 64, marginBottom: 8 }}>🖤</div>
         <h1 style={{ fontFamily: "var(--disp)", fontSize: 28, margin: "0 0 12px" }}>Nice try, babe.</h1>
         <p style={{ fontSize: 15, lineHeight: 1.6, opacity: .75, margin: "0 0 24px" }}>
           This is a private area. You've used up your attempts —
@@ -1634,12 +1634,12 @@ function AdminPage({ go }) {
   );
 
   const TABS = [
-    ["orders",    "📦 Orders"],
-    ["products",  "🛍️ Products"],
-    ["reviews",   "⭐ Reviews"],
-    ["delivered", "✅ Delivered"],
-    ["hidden",    "👁️ Hidden"],
-    ["deleted",   "🗑️ Deleted"],
+    ["orders",    "Orders"],
+    ["products",  "Products"],
+    ["reviews",   "💜 Reviews"],
+    ["delivered", "Delivered"],
+    ["hidden",    "Hidden"],
+    ["deleted",   "Deleted"],
   ];
 
   return (
@@ -1703,7 +1703,7 @@ function AdminPage({ go }) {
               marginBottom:16, fontWeight:700, fontSize:15, cursor:"pointer",
               display:"flex", alignItems:"center", justifyContent:"space-between"
             }}>
-              <span>🛍️ {newCount} new order{newCount > 1 ? "s" : ""} just came in!</span>
+              <span>💜 {newCount} new order{newCount > 1 ? "s" : ""} just came in!</span>
               <span style={{ fontSize:12, opacity:.8 }}>click to dismiss</span>
             </div>
           )}
@@ -1841,7 +1841,7 @@ function ReviewPage({ token, go }) {
     <div className="confirm-wrap"><div className="confirm">
       <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." className="confirm-logo" style={{ objectFit:"contain", marginBottom:0 }} />
       <h1 className="confirm-h">Thank you, {order?.customer_name?.split(" ")[0]}!!</h1>
-      <p className="confirm-sub">Your review means the world to us. 🍒 It'll show up on the product page shortly.</p>
+      <p className="confirm-sub">Your review means the world to us. 💜 It'll show up on the product page shortly.</p>
       {promoCode && (
         <div style={{ background:"#f8f4ff", border:"3px dashed #C9AAEB", borderRadius:12, padding:"16px 24px", margin:"16px 0", textAlign:"center" }}>
           <p style={{ margin:"0 0 6px", fontSize:13, opacity:.6, textTransform:"uppercase", letterSpacing:".06em" }}>Your 10% off coupon</p>
@@ -1865,7 +1865,7 @@ function ReviewPage({ token, go }) {
   return (
     <div className="rail sec" data-screen-label="Leave a review">
       <SectionHead title="Leave a review" />
-      <p style={{ opacity:.6, marginBottom:28 }}>Hi {order?.customer_name?.split(" ")[0]}! How did you like your order? ✨</p>
+      <p style={{ opacity:.6, marginBottom:28 }}>Hi {order?.customer_name?.split(" ")[0]}! How did you like your order? 💜</p>
       {items.map((item) => (
         <div key={item.id} style={{ border:"3px solid var(--ink)", borderRadius:16, padding:"24px 28px", marginBottom:20, background:"var(--tld-white)", boxShadow:"var(--tld-shadow)" }}>
           <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 12px" }}>{item.name}</h3>
@@ -1990,7 +1990,7 @@ function CookieBanner() {
       boxShadow:"0 4px 24px rgba(0,0,0,.3)"
     }}>
       <p style={{ margin:0, lineHeight:1.5, flex:1, minWidth:200 }}>
-        🍪 We use cookies to keep your cart and preferences. Essential cookies only — no tracking.
+        💜 We use cookies to keep your cart and preferences. Essential cookies only — no tracking.
       </p>
       <div style={{ display:"flex", gap:8, flexShrink:0 }}>
         <button onClick={decline} style={{
