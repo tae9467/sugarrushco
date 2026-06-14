@@ -19,8 +19,8 @@ const CONTACT_EMAIL = "info@sugarrushco.shop";
 const ADMIN_SERVER_URL = "https://sugarrushco.onrender.com";
 // 5. Social handles (leave blank to hide)
 const SOCIAL = {
-  instagram: "sugarrushco",
-  tiktok:    "sugarrushco",
+  instagram: "sugarrushco.shop",
+  tiktok:    "sugarrushco.shop",
   pinterest: ""
 };
 
