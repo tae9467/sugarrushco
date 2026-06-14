@@ -140,6 +140,7 @@ app.post("/create-checkout", async (req, res) => {
       line_items,
       customer_email: form.email,
       automatic_tax: { enabled: true },
+      allow_promotion_codes: true,
       metadata: { order_no: orderNo },
       success_url: "https://sugarrushco.shop/?payment=success",
       cancel_url:  "https://sugarrushco.shop/",
@@ -311,7 +312,8 @@ app.post("/admin/orders/:id/deliver", adminAuth, async (req, res) => {
           <div style="border:3px solid #29261b;border-top:none;border-radius:0 0 16px 16px;padding:36px 40px;">
             <h1 style="font-size:26px;margin:0 0 8px;">Your order was delivered! 🎀</h1>
             <p style="margin:0 0 20px;font-size:16px;">Hi ${order.customer_name}, we hope you're obsessed with your goodies!</p>
-            <p style="margin:0 0 24px;font-size:15px;">Would you mind taking a moment to leave a review? It means the world to a small business like ours.</p>
+            <p style="margin:0 0 12px;font-size:15px;">Would you mind taking a moment to leave a review? It means the world to a small business like ours.</p>
+            <p style="margin:0 0 24px;font-size:15px;font-weight:700;color:#9B72D8;">🎁 Leave a review and get 10% off your next order!</p>
             <a href="${reviewUrl}" style="display:block;text-align:center;background:#C9AAEB;color:#29261b;text-decoration:none;padding:16px 28px;border-radius:99px;font-size:16px;font-weight:700;margin-bottom:24px;border:3px solid #29261b;">
               Leave a review ✨
             </a>
@@ -367,7 +369,52 @@ app.post("/review", async (req, res) => {
 
   // Mark review as submitted
   await sb.from("orders").update({ review_submitted: true }).eq("order_no", order.order_no);
-  res.json({ ok: true });
+
+  // Create a unique 10% off Stripe promo code for this customer
+  let promoCode = null;
+  try {
+    const coupon = await stripe.coupons.create({
+      percent_off: 10,
+      duration: "once",
+      name: "10% off - Thank you for your review!"
+    });
+    const code = "THANKYOU" + Math.random().toString(36).substr(2, 5).toUpperCase();
+    const promo = await stripe.promotionCodes.create({
+      coupon: coupon.id,
+      code,
+      max_redemptions: 1
+    });
+    promoCode = promo.code;
+  } catch(e) { console.error("Promo code error:", e.message); }
+
+  // Send thank you email with coupon
+  if (order.customer_email && promoCode) {
+    await mail.emails.send({
+      from: `${SHOP_NAME} <${FROM_EMAIL}>`,
+      to: order.customer_email,
+      subject: `Thank you for your review! Here's 10% off 🍒`,
+      html: `
+        <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#29261b;">
+          <div style="background:repeating-linear-gradient(90deg,#C9AAEB 0 46px,#fff 46px 92px);height:60px;border-radius:12px 12px 0 0;"></div>
+          <div style="border:3px solid #29261b;border-top:none;border-radius:0 0 16px 16px;padding:36px 40px;text-align:center;">
+            <h1 style="font-size:26px;margin:0 0 8px;">You're the sweetest! 🍒</h1>
+            <p style="margin:0 0 20px;font-size:16px;">Thank you so much for leaving a review, ${order.customer_name}. It truly means the world to us!</p>
+            <p style="margin:0 0 16px;font-size:15px;">Here's a little thank-you gift — <strong>10% off your next order:</strong></p>
+            <div style="background:#f8f4ff;border:3px dashed #C9AAEB;border-radius:12px;padding:20px 28px;margin-bottom:24px;">
+              <p style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.08em;opacity:.6;">Your coupon code</p>
+              <p style="margin:0;font-weight:700;font-size:28px;letter-spacing:.1em;color:#9B72D8;">${promoCode}</p>
+            </div>
+            <p style="font-size:13px;opacity:.6;margin:0 0 20px;">Enter this code at checkout. One-time use only.</p>
+            <a href="https://sugarrushco.shop" style="display:inline-block;background:#C9AAEB;color:#29261b;text-decoration:none;padding:14px 32px;border-radius:99px;font-size:15px;font-weight:700;border:3px solid #29261b;">
+              Shop now →
+            </a>
+          </div>
+        </div>
+      `
+    }).catch((e) => console.error("Coupon email error:", e.message));
+  }
+
+  res.json({ ok: true, promoCode });
 });
 
 // ── PUBLIC: GET /reviews/:productId — get reviews for a product ───────────────
