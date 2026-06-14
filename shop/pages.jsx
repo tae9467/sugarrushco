@@ -809,6 +809,7 @@ function AdminPage({ go }) {
   const [tracking, setTracking] = usePState({});
   const [sending,  setSending]  = usePState({});
   const [sent,     setSent]     = usePState({});
+  const [newCount, setNewCount] = usePState(0);
 
   const login = async () => {
     if (password === (window.ADMIN_PASSWORD || "sugarrush2026")) {
@@ -820,8 +821,8 @@ function AdminPage({ go }) {
     }
   };
 
-  const fetchOrders = async (pwd) => {
-    setLoading(true);
+  const fetchOrders = async (pwd, silent) => {
+    if (!silent) setLoading(true);
     setErr("");
     try {
       const res  = await fetch(SERVER_URL + "/orders", {
@@ -829,12 +830,24 @@ function AdminPage({ go }) {
       });
       if (!res.ok) throw new Error("Auth failed");
       const data = await res.json();
-      setOrders(data);
+      setOrders((prev) => {
+        if (prev.length && data.length > prev.length) {
+          setNewCount(data.length - prev.length);
+          try { new Audio("https://www.soundjay.com/buttons/sounds/button-09a.mp3").play(); } catch {}
+        }
+        return data;
+      });
     } catch (e) {
       setErr("Could not load orders: " + e.message);
     }
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
+
+  usePEffect(() => {
+    if (!authed) return;
+    const id = setInterval(() => fetchOrders(secret, true), 30000);
+    return () => clearInterval(id);
+  }, [authed, secret]);
 
   const sendTracking = async (order) => {
     const num = (tracking[order.id] || "").trim();
@@ -881,8 +894,9 @@ function AdminPage({ go }) {
     <div className="rail sec" data-screen-label="Admin">
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 20, flexWrap:"wrap", gap: 12 }}>
         <h1 style={{ margin:0, fontFamily:"var(--disp)", fontSize:"clamp(24px,4vw,36px)" }}>Admin Dashboard</h1>
-        <div style={{ display:"flex", gap: 10 }}>
-          <button className="btn btn--sm" onClick={() => tab === "orders" ? fetchOrders() : null}>Refresh</button>
+        <div style={{ display:"flex", gap: 10, alignItems:"center" }}>
+          <span style={{ fontSize:12, opacity:.5 }}>auto-refreshes every 30s</span>
+          <button className="btn btn--sm" onClick={() => { if (tab === "orders") fetchOrders(); }}>Refresh now</button>
           <button className="btn btn--ghost btn--sm" onClick={() => go("home")}>Back to shop</button>
         </div>
       </div>
@@ -902,6 +916,16 @@ function AdminPage({ go }) {
       {tab === "products" && <ProductsTab secret={secret} />}
 
       {tab === "orders" && (<React.Fragment>
+      {newCount > 0 && (
+        <div onClick={() => setNewCount(0)} style={{
+          background:"var(--acc2)", color:"white", borderRadius:10, padding:"12px 18px",
+          marginBottom:16, fontWeight:700, fontSize:15, cursor:"pointer",
+          display:"flex", alignItems:"center", justifyContent:"space-between"
+        }}>
+          <span>🛍️ {newCount} new order{newCount > 1 ? "s" : ""} just came in!</span>
+          <span style={{ fontSize:12, opacity:.8 }}>click to dismiss</span>
+        </div>
+      )}
       {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:10, padding:"12px 16px", marginBottom:20, color:"#900" }}>{err}</div>}
 
       {loading && <p style={{ textAlign:"center", opacity:.6 }}>Loading orders...</p>}
