@@ -276,21 +276,109 @@ app.post("/track", adminAuth, async (req, res) => {
   res.json({ ok: true, message: "Tracking saved and email sent!" });
 });
 
-// ── ADMIN: POST /admin/orders/:id/deliver — mark delivered + screenshot ───────
+// ── ADMIN: POST /admin/orders/:id/deliver — mark delivered + send review email ─
 app.post("/admin/orders/:id/deliver", adminAuth, async (req, res) => {
-  const { data: orders } = await sb.from("orders").select("tracking_number").eq("order_no", req.params.id).limit(1);
+  const { data: orders } = await sb.from("orders").select("*").eq("order_no", req.params.id).limit(1);
   if (!orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
-  const tracking = orders[0].tracking_number;
+  const order = orders[0];
+
+  const tracking = order.tracking_number;
   const screenshotUrl = tracking
     ? `https://image.thum.io/get/width/800/https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking}`
     : null;
-  const { error } = await sb.from("orders").update({
+
+  // Generate unique review token
+  const reviewToken = require("crypto").randomBytes(32).toString("hex");
+
+  await sb.from("orders").update({
     status: "delivered",
     delivered_at: new Date().toISOString(),
-    delivery_screenshot: screenshotUrl
+    delivery_screenshot: screenshotUrl,
+    review_token: reviewToken,
+    review_submitted: false
   }).eq("order_no", req.params.id);
-  if (error) return res.status(500).json({ error: error.message });
+
+  // Send review invitation email
+  const reviewUrl = `https://sugarrushco.shop/?review=${reviewToken}`;
+  if (order.customer_email) {
+    await mail.emails.send({
+      from: `${SHOP_NAME} <${FROM_EMAIL}>`,
+      to: order.customer_email,
+      subject: `How did you like your Sugar Rush Co. order? 🍒`,
+      html: `
+        <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#29261b;">
+          <div style="background:repeating-linear-gradient(90deg,#C9AAEB 0 46px,#fff 46px 92px);height:60px;border-radius:12px 12px 0 0;"></div>
+          <div style="border:3px solid #29261b;border-top:none;border-radius:0 0 16px 16px;padding:36px 40px;">
+            <h1 style="font-size:26px;margin:0 0 8px;">Your order was delivered! 🎀</h1>
+            <p style="margin:0 0 20px;font-size:16px;">Hi ${order.customer_name}, we hope you're obsessed with your goodies!</p>
+            <p style="margin:0 0 24px;font-size:15px;">Would you mind taking a moment to leave a review? It means the world to a small business like ours.</p>
+            <a href="${reviewUrl}" style="display:block;text-align:center;background:#C9AAEB;color:#29261b;text-decoration:none;padding:16px 28px;border-radius:99px;font-size:16px;font-weight:700;margin-bottom:24px;border:3px solid #29261b;">
+              Leave a review ✨
+            </a>
+            <p style="font-size:12px;opacity:.5;margin:0;text-align:center;">This link is unique to your order and can only be used once.</p>
+          </div>
+        </div>
+      `
+    }).catch((e) => console.error("Review email error:", e.message));
+  }
+
   res.json({ ok: true, screenshot: screenshotUrl });
+});
+
+// ── PUBLIC: GET /review/:token — validate review token ───────────────────────
+app.get("/review/:token", async (req, res) => {
+  const { data, error } = await sb.from("orders")
+    .select("order_ref, order_no, customer_name, customer_email, items, items_json, review_submitted")
+    .eq("review_token", req.params.token)
+    .single();
+  if (error || !data) return res.status(404).json({ error: "Invalid or expired review link" });
+  if (data.review_submitted) return res.status(409).json({ error: "Review already submitted" });
+  res.json(data);
+});
+
+// ── PUBLIC: POST /review — submit review ─────────────────────────────────────
+app.post("/review", async (req, res) => {
+  const { token, reviews } = req.body;
+  if (!token || !reviews || !reviews.length) return res.status(400).json({ error: "Missing data" });
+
+  // Validate token
+  const { data: order, error: orderErr } = await sb.from("orders")
+    .select("order_no, order_ref, customer_email, customer_name, review_submitted")
+    .eq("review_token", token)
+    .single();
+  if (orderErr || !order) return res.status(404).json({ error: "Invalid review link" });
+  if (order.review_submitted) return res.status(409).json({ error: "Already submitted" });
+
+  // Insert all reviews
+  const rows = reviews.map((r) => ({
+    order_ref:      order.order_ref || String(order.order_no),
+    customer_email: order.customer_email,
+    customer_name:  order.customer_name,
+    product_id:     r.product_id,
+    product_name:   r.product_name,
+    rating:         r.rating,
+    body:           r.body,
+    images:         JSON.stringify(r.images || []),
+    approved:       true
+  }));
+
+  const { error: insertErr } = await sb.from("reviews").insert(rows);
+  if (insertErr) return res.status(500).json({ error: insertErr.message });
+
+  // Mark review as submitted
+  await sb.from("orders").update({ review_submitted: true }).eq("order_no", order.order_no);
+  res.json({ ok: true });
+});
+
+// ── PUBLIC: GET /reviews/:productId — get reviews for a product ───────────────
+app.get("/reviews/:productId", async (req, res) => {
+  const { data, error } = await sb.from("reviews")
+    .select("customer_name, rating, body, images, created_at")
+    .eq("product_id", req.params.productId)
+    .eq("approved", true)
+    .order("created_at", { ascending: false });
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
 });
 
 // ── Health check ──────────────────────────────────────────────────────────────

@@ -91,6 +91,7 @@ function ProductPage({ route, go, onAdd }) {
           </div>
         </div>
       </div>
+      <ProductReviews productId={p.id} />
     </div>
   );
 }
@@ -1338,7 +1339,218 @@ function AdminPage({ go }) {
   );
 }
 
-Object.assign(window, { ShopPage, ProductPage, CartDrawer, CheckoutPage, ConfirmPage, ContactPage, TermsPage, RefundPage, AdminPage });
+/* ── Star rating component ── */
+function StarRating({ value, onChange, size = 28 }) {
+  const [hovered, setHovered] = usePState(0);
+  return (
+    <div style={{ display:"flex", gap:4 }}>
+      {[1,2,3,4,5].map((n) => (
+        <span key={n}
+          onClick={() => onChange && onChange(n)}
+          onMouseEnter={() => onChange && setHovered(n)}
+          onMouseLeave={() => onChange && setHovered(0)}
+          style={{ fontSize:size, cursor: onChange ? "pointer" : "default", color: n <= (hovered || value) ? "#f5a623" : "#ddd", lineHeight:1 }}>
+          ★
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/* ── Review page — customer lands here from email link ── */
+function ReviewPage({ token, go }) {
+  const [state, setState] = usePState("loading"); // loading | ready | submitted | error | already
+  const [order, setOrder] = usePState(null);
+  const [items, setItems]   = usePState([]);
+  const [reviews, setReviews] = usePState({});
+  const [submitting, setSubmitting] = usePState(false);
+  const SERVER = window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com";
+
+  usePEffect(() => {
+    fetch(SERVER + "/review/" + token)
+      .then((r) => {
+        if (r.status === 409) { setState("already"); return null; }
+        if (!r.ok) { setState("error"); return null; }
+        return r.json();
+      })
+      .then((data) => {
+        if (!data) return;
+        setOrder(data);
+        let parsed = [];
+        try { parsed = JSON.parse(data.items_json || "[]"); } catch {}
+        setItems(parsed);
+        const init = {};
+        parsed.forEach((i) => { init[i.id] = { rating:5, body:"", images:[] }; });
+        setReviews(init);
+        setState("ready");
+      })
+      .catch(() => setState("error"));
+  }, [token]);
+
+  const addImage = (productId, files) => {
+    Array.from(files).forEach((file) => {
+      if (!file.type.startsWith("image/")) return;
+      const reader = new FileReader();
+      reader.onload = (e) => setReviews((r) => ({
+        ...r, [productId]: { ...r[productId], images: [...(r[productId].images || []), e.target.result] }
+      }));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const submit = async () => {
+    const payload = items.map((i) => ({
+      product_id:   i.id,
+      product_name: i.name,
+      rating:       reviews[i.id]?.rating || 5,
+      body:         reviews[i.id]?.body || "",
+      images:       reviews[i.id]?.images || []
+    }));
+    setSubmitting(true);
+    try {
+      const res = await fetch(SERVER + "/review", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, reviews: payload })
+      });
+      if (res.ok) setState("submitted");
+      else { const d = await res.json(); setState("error"); }
+    } catch { setState("error"); }
+    setSubmitting(false);
+  };
+
+  if (state === "loading") return (
+    <div className="confirm-wrap"><div className="confirm"><CherryIcon size={40} /><p style={{ marginTop:16 }}>Loading your review page…</p></div></div>
+  );
+  if (state === "already") return (
+    <div className="confirm-wrap"><div className="confirm">
+      <CherryIcon size={40} />
+      <h1 className="confirm-h">Already reviewed!</h1>
+      <p className="confirm-sub">You already left a review for this order. Thank you so much!</p>
+      <button className="btn" onClick={() => go("shop")}>Back to shop</button>
+    </div></div>
+  );
+  if (state === "error") return (
+    <div className="confirm-wrap"><div className="confirm">
+      <CherryIcon size={40} />
+      <h1 className="confirm-h">Oops!</h1>
+      <p className="confirm-sub">This review link is invalid or has expired.</p>
+      <button className="btn" onClick={() => go("home")}>Back home</button>
+    </div></div>
+  );
+  if (state === "submitted") return (
+    <div className="confirm-wrap"><div className="confirm">
+      <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." className="confirm-logo" style={{ objectFit:"contain", marginBottom:0 }} />
+      <h1 className="confirm-h">Thank you, {order?.customer_name?.split(" ")[0]}!!</h1>
+      <p className="confirm-sub">Your review means the world to us. 🍒 It'll show up on the product page shortly.</p>
+      <button className="btn" onClick={() => go("shop")}>Keep shopping</button>
+    </div></div>
+  );
+
+  return (
+    <div className="rail sec" data-screen-label="Leave a review">
+      <SectionHead title="Leave a review" />
+      <p style={{ opacity:.6, marginBottom:28 }}>Hi {order?.customer_name?.split(" ")[0]}! How did you like your order? ✨</p>
+      {items.map((item) => (
+        <div key={item.id} style={{ border:"3px solid var(--ink)", borderRadius:16, padding:"24px 28px", marginBottom:20, background:"var(--tld-white)", boxShadow:"var(--tld-shadow)" }}>
+          <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 12px" }}>{item.name}</h3>
+          <div style={{ marginBottom:12 }}>
+            <label style={{ fontSize:12, fontWeight:700, opacity:.6, textTransform:"uppercase", display:"block", marginBottom:6 }}>Your rating</label>
+            <StarRating value={reviews[item.id]?.rating || 5} onChange={(v) => setReviews((r) => ({ ...r, [item.id]: { ...r[item.id], rating:v } }))} />
+          </div>
+          <div style={{ marginBottom:12 }}>
+            <label style={{ fontSize:12, fontWeight:700, opacity:.6, textTransform:"uppercase", display:"block", marginBottom:6 }}>Your review</label>
+            <textarea className="input" rows={4} placeholder="Tell others what you loved about it..."
+              value={reviews[item.id]?.body || ""}
+              onChange={(e) => setReviews((r) => ({ ...r, [item.id]: { ...r[item.id], body: e.target.value } }))}
+              style={{ width:"100%", resize:"vertical" }} />
+          </div>
+          <div>
+            <label style={{ fontSize:12, fontWeight:700, opacity:.6, textTransform:"uppercase", display:"block", marginBottom:6 }}>Photos (optional)</label>
+            <label style={{ display:"inline-block", border:"2px dashed var(--ink)", borderRadius:8, padding:"8px 16px", cursor:"pointer", fontSize:13, opacity:.7 }}>
+              + Add photos
+              <input type="file" accept="image/*" multiple style={{ display:"none" }} onChange={(e) => addImage(item.id, e.target.files)} />
+            </label>
+            {(reviews[item.id]?.images || []).length > 0 && (
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:10 }}>
+                {(reviews[item.id]?.images || []).map((src, i) => (
+                  <div key={i} style={{ position:"relative" }}>
+                    <img src={src} alt="" style={{ width:70, height:70, objectFit:"cover", borderRadius:8, border:"2px solid var(--ink)" }} />
+                    <button onClick={() => setReviews((r) => ({ ...r, [item.id]: { ...r[item.id], images: r[item.id].images.filter((_,j) => j!==i) } }))}
+                      style={{ position:"absolute", top:2, right:2, background:"#c00", color:"white", border:"none", borderRadius:"50%", width:18, height:18, fontSize:12, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      ))}
+      <button className="btn btn--wide" onClick={submit} disabled={submitting} style={submitting ? { opacity:.65 } : null}>
+        {submitting ? "Submitting…" : "Submit my review"}
+      </button>
+    </div>
+  );
+}
+
+/* ── Product reviews display ── */
+function ProductReviews({ productId }) {
+  const [reviews, setReviews] = usePState([]);
+  const [loading, setLoading] = usePState(true);
+  const SERVER = window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com";
+
+  usePEffect(() => {
+    fetch(SERVER + "/reviews/" + productId)
+      .then((r) => r.json())
+      .then((data) => { setReviews(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [productId]);
+
+  if (loading) return null;
+  if (!reviews.length) return (
+    <div style={{ marginTop:40, paddingTop:28, borderTop:"2px solid var(--ink)" }}>
+      <h3 style={{ fontFamily:"var(--disp)", fontSize:22, margin:"0 0 8px" }}>Reviews</h3>
+      <p style={{ opacity:.5, fontSize:14 }}>No reviews yet — be the first!</p>
+    </div>
+  );
+
+  const avg = (reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1);
+
+  return (
+    <div style={{ marginTop:40, paddingTop:28, borderTop:"2px solid var(--ink)" }}>
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24, flexWrap:"wrap" }}>
+        <h3 style={{ fontFamily:"var(--disp)", fontSize:22, margin:0 }}>Reviews</h3>
+        <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+          <StarRating value={Math.round(avg)} size={20} />
+          <span style={{ fontWeight:700, fontSize:15 }}>{avg}</span>
+          <span style={{ opacity:.5, fontSize:13 }}>({reviews.length} review{reviews.length !== 1 ? "s" : ""})</span>
+        </div>
+      </div>
+      {reviews.map((r, i) => {
+        let imgs = [];
+        try { imgs = JSON.parse(r.images || "[]"); } catch {}
+        return (
+          <div key={i} style={{ borderBottom: i < reviews.length-1 ? "1px solid #eee" : "none", paddingBottom:20, marginBottom:20 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6, flexWrap:"wrap" }}>
+              <StarRating value={r.rating} size={18} />
+              <strong style={{ fontSize:14 }}>{r.customer_name}</strong>
+              <span style={{ fontSize:12, opacity:.45 }}>{new Date(r.created_at).toLocaleDateString()}</span>
+            </div>
+            {r.body && <p style={{ margin:"0 0 10px", fontSize:14, lineHeight:1.6 }}>{r.body}</p>}
+            {imgs.length > 0 && (
+              <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                {imgs.map((src, j) => (
+                  <img key={j} src={src} alt="" style={{ width:80, height:80, objectFit:"cover", borderRadius:8, border:"2px solid var(--ink)", cursor:"pointer" }}
+                    onClick={() => window.open(src, "_blank")} />
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+Object.assign(window, { ShopPage, ProductPage, CartDrawer, CheckoutPage, ConfirmPage, ContactPage, TermsPage, RefundPage, AdminPage, ReviewPage });
 
 
 

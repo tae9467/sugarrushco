@@ -99,6 +99,11 @@ function App() {
       window.history.replaceState({}, "", window.location.pathname);
       return { name: "admin" };
     }
+    if (params.get("review")) {
+      const token = params.get("review");
+      window.history.replaceState({}, "", window.location.pathname);
+      return { name: "review", token };
+    }
     return loadJSON(ROUTE_KEY, { name: "home" });
   }, []);
 
@@ -151,6 +156,7 @@ function App() {
   else if (route.name === "terms")    page = <TermsPage go={go} />;
   else if (route.name === "refunds")  page = <RefundPage go={go} />;
   else if (route.name === "admin")   page = <AdminPage go={go} />;
+  else if (route.name === "review")  page = <ReviewPage token={route.token} go={go} />;
   else page = <HomePage t={t} tone={tone} go={go} onAdd={addToCart} />;
 
   return (
