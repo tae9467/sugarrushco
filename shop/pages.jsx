@@ -1364,6 +1364,7 @@ function ReviewPage({ token, go }) {
   const [items, setItems]   = usePState([]);
   const [reviews, setReviews] = usePState({});
   const [submitting, setSubmitting] = usePState(false);
+  const [promoCode,  setPromoCode]  = usePState(null);
   const SERVER = window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com";
 
   usePEffect(() => {
@@ -1419,7 +1420,11 @@ function ReviewPage({ token, go }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token, reviews: payload })
       });
-      if (res.ok) setState("submitted");
+      if (res.ok) {
+        const d = await res.json();
+        if (d.promoCode) setPromoCode(d.promoCode);
+        setState("submitted");
+      }
       else if (res.status === 409) setState("already");
       else { const d = await res.json(); alert("Submission failed: " + (d.error || "Please try again")); setSubmitting(false); return; }
     } catch { setState("error"); }
@@ -1450,6 +1455,13 @@ function ReviewPage({ token, go }) {
       <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." className="confirm-logo" style={{ objectFit:"contain", marginBottom:0 }} />
       <h1 className="confirm-h">Thank you, {order?.customer_name?.split(" ")[0]}!!</h1>
       <p className="confirm-sub">Your review means the world to us. 🍒 It'll show up on the product page shortly.</p>
+      {promoCode && (
+        <div style={{ background:"#f8f4ff", border:"3px dashed #C9AAEB", borderRadius:12, padding:"16px 24px", margin:"16px 0", textAlign:"center" }}>
+          <p style={{ margin:"0 0 6px", fontSize:13, opacity:.6, textTransform:"uppercase", letterSpacing:".06em" }}>Your 10% off coupon</p>
+          <p style={{ margin:0, fontWeight:700, fontSize:26, letterSpacing:".1em", color:"#9B72D8" }}>{promoCode}</p>
+          <p style={{ margin:"6px 0 0", fontSize:12, opacity:.5 }}>Also sent to your email · use at checkout</p>
+        </div>
+      )}
       <button className="btn" onClick={() => go("shop")}>Keep shopping</button>
     </div></div>
   );

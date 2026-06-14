@@ -372,6 +372,7 @@ app.post("/review", async (req, res) => {
 
   // Create a unique 10% off Stripe promo code for this customer
   let promoCode = null;
+  let promoError = null;
   try {
     const coupon = await stripe.coupons.create({
       percent_off: 10,
@@ -385,7 +386,10 @@ app.post("/review", async (req, res) => {
       max_redemptions: 1
     });
     promoCode = promo.code;
-  } catch(e) { console.error("Promo code error:", e.message); }
+  } catch(e) {
+    promoError = e.message;
+    console.error("Promo code error:", e.message);
+  }
 
   // Send thank you email with coupon
   if (order.customer_email && promoCode) {
@@ -414,7 +418,7 @@ app.post("/review", async (req, res) => {
     }).catch((e) => console.error("Coupon email error:", e.message));
   }
 
-  res.json({ ok: true, promoCode });
+  res.json({ ok: true, promoCode, promoError });
 });
 
 // ── PUBLIC: GET /reviews/:productId — get reviews for a product ───────────────
