@@ -9,7 +9,8 @@ const app  = express();
 const sb   = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
 const mail = new Resend(process.env.RESEND_API_KEY);
 
-const ADMIN_SECRET  = process.env.ADMIN_SECRET || "sugarrush2026";
+const ADMIN_SECRET  = process.env.ADMIN_SECRET;
+if (!ADMIN_SECRET) throw new Error("ADMIN_SECRET environment variable is not set!");
 const FROM_EMAIL    = process.env.FROM_EMAIL    || "info@sugarrushco.shop";
 const SHOP_NAME     = "Sugar Rush Co.";
 
