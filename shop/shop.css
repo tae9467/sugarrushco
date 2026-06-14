@@ -477,8 +477,13 @@ html, body { margin: 0; padding: 0; }
   .pcard-foot  { flex-direction: column; align-items: stretch; }
   .btn--sm     { text-align: center; justify-content: center; }
 }
-/* ---- category chips horizontal scroll on mobile ---- */
-.cats--scroll { flex-wrap: wrap; }
+/* ---- category chips: always scroll horizontally, never wrap ---- */
+.cats--scroll { flex-wrap: nowrap !important; overflow-x: auto; overflow-y: visible; -webkit-overflow-scrolling: touch; scrollbar-width: none; justify-content: flex-start !important; padding-bottom: 4px; }
+.cats--scroll::-webkit-scrollbar { display: none; }
+.cats--scroll .cat-chip { flex-shrink: 0 !important; }
+
+/* ---- smooth image fade-in so nothing pops in harshly ---- */
+img { transition: opacity 0.25s ease; }
 
 /* ---- footer logo row: always has min height so gap never collapses ---- */
 .ftr-logo-row { min-height: 100px; }

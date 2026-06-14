@@ -29,7 +29,7 @@ function ShopPage({ route, go, onAdd }) {
   return (
     <div className="rail sec" data-screen-label="Shop">
       <SectionHead title="The whole sweet shop" />
-      <div className="cats" style={{ justifyContent: "flex-start", marginBottom: 30 }}>
+      <div className="cats cats--scroll" style={{ justifyContent: "flex-start", marginBottom: 30 }}>
         <button className={"cat-chip" + (cat === "all" ? " is-on" : "")} onClick={() => go("shop")}>
           <CherryIcon size={18} /> Everything
         </button>
@@ -1634,12 +1634,12 @@ function AdminPage({ go }) {
   );
 
   const TABS = [
-    ["orders",    "Orders"],
-    ["products",  "Products"],
+    ["orders",    "▸ Orders"],
+    ["products",  "◆ Products"],
     ["reviews",   "💜 Reviews"],
-    ["delivered", "Delivered"],
-    ["hidden",    "Hidden"],
-    ["deleted",   "Deleted"],
+    ["delivered", "✓ Delivered"],
+    ["hidden",    "◎ Hidden"],
+    ["deleted",   "✕ Deleted"],
   ];
 
   return (
@@ -1703,7 +1703,7 @@ function AdminPage({ go }) {
               marginBottom:16, fontWeight:700, fontSize:15, cursor:"pointer",
               display:"flex", alignItems:"center", justifyContent:"space-between"
             }}>
-              <span>💜 {newCount} new order{newCount > 1 ? "s" : ""} just came in!</span>
+              <span>● {newCount} new order{newCount > 1 ? "s" : ""} just came in!</span>
               <span style={{ fontSize:12, opacity:.8 }}>click to dismiss</span>
             </div>
           )}
@@ -1736,7 +1736,7 @@ function StarRating({ value, onChange, size = 28 }) {
           onClick={() => onChange && onChange(n)}
           onMouseEnter={() => onChange && setHovered(n)}
           onMouseLeave={() => onChange && setHovered(0)}
-          style={{ fontSize:size, cursor: onChange ? "pointer" : "default", color: n <= (hovered || value) ? "#f5a623" : "#ddd", lineHeight:1 }}>
+          style={{ fontSize:size, cursor: onChange ? "pointer" : "default", color: n <= (hovered || value) ? "#9B72D8" : "#ddd", lineHeight:1 }}>
           ★
         </span>
       ))}
