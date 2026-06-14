@@ -1,6 +1,6 @@
 // Sugar Rush Co. -- home page: 3 variants + shared sections
 
-function HomeStorefront({ t, tone, go, onAdd }) {
+function HomeStorefront({ t, tone, go, onAdd, productsLoaded }) {
   const featured = SHOP_DATA.featured.slice(0, 4).map(productById).filter(Boolean);
   return (
     <div data-screen-label="Home - Storefront">
@@ -11,7 +11,16 @@ function HomeStorefront({ t, tone, go, onAdd }) {
           <p className="hero-sub">{tone.sub}</p>
           <Awning awning={t.awning} name={t.shopName} />
           <div className="window-card">
-            {featured.length === 0 ? (
+            {!productsLoaded ? (
+              <div style={{ display:"flex", gap:12, padding:"16px 12px" }}>
+                {[1,2,3,4].map((n) => (
+                  <div key={n} style={{ flex:1, display:"flex", flexDirection:"column", gap:8 }}>
+                    <div className="skeleton" style={{ height:130, borderRadius:10 }} />
+                    <div className="skeleton" style={{ height:12, borderRadius:6 }} />
+                  </div>
+                ))}
+              </div>
+            ) : featured.length === 0 ? (
               <div style={{ textAlign:"center", padding:"40px 24px", color:"var(--ink)" }}>
                 <img src="shop/assets/logo-footer.png" alt="Sugar Rush Co." style={{ height:70, objectFit:"contain", marginBottom:12 }} />
                 <p style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 8px" }}>New drop coming soon!</p>
@@ -95,7 +104,7 @@ function HomePage(props) {
   const v = props.t.homeVariant;
   if (v === "Circus")   return <HomeCircus   {...props} />;
   if (v === "Coquette") return <HomeCoquette {...props} />;
-  return <HomeStorefront {...props} />;
+  return <HomeStorefront {...props} productsLoaded={props.productsLoaded} />;
 }
 
 Object.assign(window, { HomePage, HomeStorefront, HomeCircus, HomeCoquette });

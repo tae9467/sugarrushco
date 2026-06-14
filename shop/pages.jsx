@@ -23,7 +23,21 @@ function ComingSoonBanner() {
   );
 }
 
-function ShopPage({ route, go, onAdd }) {
+function ProductSkeleton() {
+  return (
+    <div style={{ borderRadius:16, overflow:"hidden", border:"3px solid #e0d8f0" }}>
+      <div className="skeleton" style={{ height:220 }} />
+      <div style={{ padding:"12px 14px", display:"flex", flexDirection:"column", gap:8 }}>
+        <div className="skeleton" style={{ height:16, width:"70%" }} />
+        <div className="skeleton" style={{ height:13, width:"90%" }} />
+        <div className="skeleton" style={{ height:13, width:"50%" }} />
+        <div className="skeleton" style={{ height:36, marginTop:4, borderRadius:99 }} />
+      </div>
+    </div>
+  );
+}
+
+function ShopPage({ route, go, onAdd, productsLoaded }) {
   const cat  = route.cat || "all";
   const list = SHOP_DATA.products.filter((p) => cat === "all" || p.cat === cat);
   return (
@@ -39,7 +53,11 @@ function ShopPage({ route, go, onAdd }) {
           </button>
         ))}
       </div>
-      {list.length === 0 ? <ComingSoonBanner /> : (
+      {!productsLoaded ? (
+        <div className="pgrid">
+          {[1,2,3,4,5,6].map((n) => <ProductSkeleton key={n} />)}
+        </div>
+      ) : list.length === 0 ? <ComingSoonBanner /> : (
         <div className="pgrid">
           {list.map((p) => <ProductCard key={p.id} p={p} go={go} onAdd={onAdd} showBlurb />)}
         </div>

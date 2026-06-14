@@ -81,10 +81,17 @@ function App() {
             images: p.images || ""
           }));
           SHOP_DATA.featured = SHOP_DATA.products.slice(0, 4).map((p) => p.id);
+          // Preload all product images in the background so page transitions feel instant
+          SHOP_DATA.products.forEach((p) => {
+            let srcs = [];
+            try { srcs = JSON.parse(p.images || "[]"); } catch {}
+            if (!srcs.length && p.image_url) srcs = [p.image_url];
+            srcs.forEach((src) => { if (src) { const img = new Image(); img.src = src; } });
+          });
         }
         setProductsLoaded(true);
       })
-      .catch(() => setProductsLoaded(true)); // on error use hardcoded fallback
+      .catch(() => setProductsLoaded(true));
   }, []);
 
   const initialRoute = React.useMemo(() => {
@@ -147,8 +154,8 @@ function App() {
   };
 
   let page = null;
-  if      (route.name === "shop")     page = <ShopPage route={route} go={go} onAdd={addToCart} />;
-  else if (route.name === "product")  page = <ProductPage key={route.id} route={route} go={go} onAdd={addToCart} />;
+  if      (route.name === "shop")     page = <ShopPage route={route} go={go} onAdd={addToCart} productsLoaded={productsLoaded} />;
+  else if (route.name === "product")  page = <ProductPage key={route.id} route={route} go={go} onAdd={addToCart} productsLoaded={productsLoaded} />;
   else if (route.name === "checkout") page = <CheckoutPage cart={cart} subtotal={subtotal} go={go} onPlaced={() => { setCart([]); go("confirm"); }} />;
   else if (route.name === "confirm")  page = <ConfirmPage go={go} />;
   else if (route.name === "contact")  page = <ContactPage go={go} />;
@@ -156,7 +163,7 @@ function App() {
   else if (route.name === "refunds")  page = <RefundPage go={go} />;
   else if (route.name === "admin")   page = <AdminPage go={go} />;
   else if (route.name === "review")  page = <ReviewPage token={route.token} go={go} />;
-  else page = <HomePage t={t} tone={tone} go={go} onAdd={addToCart} />;
+  else page = <HomePage t={t} tone={tone} go={go} onAdd={addToCart} productsLoaded={productsLoaded} />;
 
   return (
     <div className={"shop-root" + (route.name === "contact" ? " is-contact" : "")} style={themeVars}>

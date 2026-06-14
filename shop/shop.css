@@ -485,6 +485,10 @@ html, body { margin: 0; padding: 0; }
 /* ---- smooth image fade-in so nothing pops in harshly ---- */
 img { transition: opacity 0.25s ease; }
 
+/* ---- skeleton loading pulse ---- */
+@keyframes skeleton-pulse { 0%,100% { opacity:.45; } 50% { opacity:.9; } }
+.skeleton { background: linear-gradient(90deg, #e8e0f5 25%, #d4c8ed 50%, #e8e0f5 75%); background-size: 200% 100%; animation: skeleton-pulse 1.4s ease-in-out infinite; border-radius: 12px; }
+
 /* ---- footer logo row: always has min height so gap never collapses ---- */
 .ftr-logo-row { min-height: 100px; }
 
