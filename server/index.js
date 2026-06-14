@@ -354,7 +354,7 @@ app.post("/track", adminAuth, async (req, res) => {
   const { error: emailErr } = await mail.emails.send({
     from: `${SHOP_NAME} <${FROM_EMAIL}>`,
     to:   order.customer_email,
-    subject: `Your ${SHOP_NAME} order is on its way! 🎀`,
+    subject: `Your ${SHOP_NAME} order is on its way! ✨`,
     html: `
       <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#29261b;">
         <div style="background:repeating-linear-gradient(90deg,#C9AAEB 0 46px,#fff 46px 92px);height:60px;border-radius:12px 12px 0 0;"></div>
@@ -370,7 +370,7 @@ app.post("/track", adminAuth, async (req, res) => {
           <a href="${uspsUrl}" style="display:block;text-align:center;background:#29261b;color:#fff;text-decoration:none;padding:14px 28px;border-radius:99px;font-size:15px;font-weight:700;margin-bottom:24px;">
             Track my package →
           </a>
-          <p style="font-size:13px;opacity:.6;margin:0;">Questions? Reply to this email or visit our site.<br>Thank you for supporting ${SHOP_NAME}! 🎀</p>
+          <p style="font-size:13px;opacity:.6;margin:0;">Questions? Reply to this email or visit our site.<br>Thank you for supporting ${SHOP_NAME}! ✨</p>
         </div>
       </div>
     `
@@ -413,7 +413,7 @@ app.post("/admin/orders/:id/deliver", adminAuth, async (req, res) => {
         <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#29261b;">
           <div style="background:repeating-linear-gradient(90deg,#C9AAEB 0 46px,#fff 46px 92px);height:60px;border-radius:12px 12px 0 0;"></div>
           <div style="border:3px solid #29261b;border-top:none;border-radius:0 0 16px 16px;padding:36px 40px;">
-            <h1 style="font-size:26px;margin:0 0 8px;">Your order was delivered! 🎀</h1>
+            <h1 style="font-size:26px;margin:0 0 8px;">Your order was delivered! ✨</h1>
             <p style="margin:0 0 20px;font-size:16px;">Hi ${order.customer_name}, we hope you're obsessed with your goodies!</p>
             <p style="margin:0 0 12px;font-size:15px;">Would you mind taking a moment to leave a review? It means the world to a small business like ours.</p>
             <p style="margin:0 0 24px;font-size:15px;font-weight:700;color:#9B72D8;">🎁 Leave a review and get 10% off your next order!</p>
@@ -578,7 +578,7 @@ app.post("/admin/reviews/:id/reply", adminAuth, async (req, res) => {
               <p style="margin:0 0 8px;font-size:12px;opacity:.6;text-transform:uppercase;letter-spacing:.06em;">Our reply</p>
               <p style="margin:0;font-size:15px;font-weight:600;">${reply}</p>
             </div>
-            <p style="font-size:13px;opacity:.6;margin:0;">Thank you so much for your support! 🎀</p>
+            <p style="font-size:13px;opacity:.6;margin:0;">Thank you so much for your support! ✨</p>
           </div>
         </div>
       `
@@ -604,7 +604,7 @@ app.post("/admin/orders/:id/send-review", adminAuth, async (req, res) => {
       <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#29261b;">
         <div style="background:repeating-linear-gradient(90deg,#C9AAEB 0 46px,#fff 46px 92px);height:60px;border-radius:12px 12px 0 0;"></div>
         <div style="border:3px solid #29261b;border-top:none;border-radius:0 0 16px 16px;padding:36px 40px;">
-          <h1 style="font-size:26px;margin:0 0 8px;">We'd love your review! 🎀</h1>
+          <h1 style="font-size:26px;margin:0 0 8px;">We'd love your review! ✨</h1>
           <p style="margin:0 0 20px;font-size:16px;">Hi ${order.customer_name}, we hope you're loving your goodies!</p>
           <p style="margin:0 0 24px;font-size:15px;font-weight:700;color:#9B72D8;">🎁 Leave a review and get 10% off your next order!</p>
           <a href="${reviewUrl}" style="display:block;text-align:center;background:#C9AAEB;color:#29261b;text-decoration:none;padding:16px 28px;border-radius:99px;font-size:16px;font-weight:700;margin-bottom:24px;border:3px solid #29261b;">

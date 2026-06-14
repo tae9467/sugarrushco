@@ -30,7 +30,7 @@ function HomeStorefront({ t, tone, go, onAdd }) {
               </div>
             )}
             <hr className="window-shelf" />
-            <p className="window-caption">{featured.length === 0 ? "Check back soon! 🎀" : `${tone.window} - tap anything to come inside`}</p>
+            <p className="window-caption">{featured.length === 0 ? "Check back soon!" : `${tone.window} - tap anything to come inside`}</p>
           </div>
         </div>
       </section>

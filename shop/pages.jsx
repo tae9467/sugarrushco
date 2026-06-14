@@ -14,7 +14,7 @@ function ComingSoonBanner() {
       </h2>
       <p style={{ fontSize: 16, lineHeight: 1.7, maxWidth: 420, opacity: .7, margin: 0 }}>
         Every last little thing flew off the shelves — thank you so much!
-        New goodies drop <strong>every other Friday</strong>, so check back soon. 🎀
+        New goodies drop <strong>every other Friday</strong>, so check back soon.
       </p>
       <p style={{ fontSize: 14, opacity: .5, margin: 0 }}>
         Follow us on Instagram <strong>@sugarrushco.shop</strong> so you never miss a drop!
