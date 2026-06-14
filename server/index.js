@@ -181,26 +181,6 @@ app.put("/admin/orders/:id", adminAuth, async (req, res) => {
   res.json(data);
 });
 
-// ── ADMIN: DELETE /admin/orders/:id — refund + soft delete ───────────────────
-app.delete("/admin/orders/:id", adminAuth, async (req, res) => {
-  const { data: orders } = await sb.from("orders").select("*").eq("order_no", req.params.id).limit(1);
-  if (!orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
-  const order = orders[0];
-
-  // Issue Stripe refund if payment exists
-  if (order.stripe_payment_id) {
-    try {
-      await stripe.refunds.create({ payment_intent: order.stripe_payment_id });
-    } catch(e) {
-      console.error("Stripe refund error:", e.message);
-      return res.status(500).json({ error: "Refund failed: " + e.message });
-    }
-  }
-
-  // Soft delete the order
-  await sb.from("orders").update({ deleted: true, hidden: false }).eq("order_no", req.params.id);
-  res.json({ ok: true });
-});
 
 // ── ADMIN: POST /admin/products — create product ──────────────────────────────
 app.post("/admin/products", adminAuth, async (req, res) => {
