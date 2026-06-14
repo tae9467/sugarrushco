@@ -35,32 +35,30 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
-    const meta    = session.metadata || {};
-    const orderNo = meta.order_no || ("SR-" + Date.now());
+    const orderNo = (session.metadata || {}).order_no;
+    if (!orderNo) { console.error("Webhook: no order_no in metadata"); return res.json({ received: true }); }
 
-    // Decrement stock for each item ordered
+    // Look up the pre-saved pending order — all data already verified server-side
+    const { data: existing } = await sb.from("orders").select("*").eq("order_no", orderNo).single();
+    if (!existing) { console.error("Webhook: pending order not found:", orderNo); return res.json({ received: true }); }
+
+    // Mark paid and record Stripe payment ID
+    await sb.from("orders").update({
+      status:            "paid",
+      stripe_payment_id: session.payment_intent,
+      total:             session.amount_total / 100
+    }).eq("order_no", orderNo);
+
+    // Decrement stock using the verified items we saved at checkout time
     try {
-      const items = JSON.parse(meta.items_json || "[]");
+      const items = JSON.parse(existing.items_json || "[]");
       for (const item of items) {
         const { data: prod } = await sb.from("products").select("stock").eq("id", item.id).single();
         if (prod) {
-          const newStock = Math.max(0, (prod.stock || 0) - (item.qty || 1));
-          await sb.from("products").update({ stock: newStock }).eq("id", item.id);
+          await sb.from("products").update({ stock: Math.max(0, (prod.stock || 0) - item.qty) }).eq("id", item.id);
         }
       }
     } catch(e) { console.error("Stock decrement error:", e.message); }
-
-    const { error } = await sb.from("orders").insert({
-      order_no:          orderNo,
-      customer_name:     meta.customer_name   || "",
-      customer_email:    meta.customer_email  || "",
-      customer_address:  meta.customer_address || "",
-      items:             meta.items            || "",
-      total:             session.amount_total / 100,
-      stripe_payment_id: session.payment_intent,
-      status:            "paid"
-    });
-    if (error) console.error("Supabase insert error:", error.message);
   }
 
   res.json({ received: true });
@@ -91,30 +89,26 @@ app.post("/create-checkout", async (req, res) => {
   const { cart, form, orderNo } = req.body;
   if (!cart || !cart.length) return res.status(400).json({ error: "cart required" });
   try {
-    // Look up real prices from Supabase — never trust client-sent prices
-    const ids = [...new Set(cart.map((i) => i.id))]; // dedupe IDs
+    // 1. Look up real prices from Supabase — never trust client-sent data
+    const ids = [...new Set(cart.map((i) => i.id))];
     const { data: products, error: dbErr } = await sb.from("products").select("id, name, price").in("id", ids).eq("active", true);
     if (dbErr) throw new Error("Could not verify product prices");
 
     const productMap = {};
     products.forEach((p) => { productMap[p.id] = p; });
 
-    const line_items = [];
-    const itemLabels = [];
+    const verifiedItems = [];
+    const line_items    = [];
     let subtotal = 0;
 
     for (const item of cart) {
       const p = productMap[item.id];
-      if (!p) return res.status(400).json({ error: `Product not found or unavailable` });
+      if (!p) return res.status(400).json({ error: "Product not found or unavailable" });
       const qty = Math.min(99, Math.max(1, Math.round(item.qty)));
       subtotal += p.price * qty;
-      itemLabels.push(`${p.name} x${qty}`);
+      verifiedItems.push({ id: p.id, name: p.name, price: p.price, qty });
       line_items.push({
-        price_data: {
-          currency: "usd",
-          product_data: { name: p.name },
-          unit_amount: Math.round(p.price * 100),
-        },
+        price_data: { currency: "usd", product_data: { name: p.name }, unit_amount: Math.round(p.price * 100) },
         quantity: qty,
       });
     }
@@ -129,20 +123,27 @@ app.post("/create-checkout", async (req, res) => {
 
     const customerAddress = form.fullAddress || `${form.address || ""}${form.address2 ? ", " + form.address2 : ""}, ${form.city || ""} ${form.zip || ""}`;
 
+    // 2. Save verified order to Supabase as "pending" BEFORE sending to Stripe
+    //    Webhook will update this to "paid" — no frontend data touches fulfillment
+    await sb.from("orders").insert({
+      order_no:         orderNo,
+      customer_name:    form.name,
+      customer_email:   form.email,
+      customer_address: customerAddress,
+      items:            verifiedItems.map((i) => `${i.name} x${i.qty}`).join(", "),
+      items_json:       JSON.stringify(verifiedItems),
+      total:            subtotal + shipping,
+      status:           "pending"
+    });
+
+    // 3. Create Stripe session — metadata just carries orderNo for webhook lookup
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
       line_items,
       customer_email: form.email,
       automatic_tax: { enabled: true },
-      metadata: {
-        order_no:         orderNo,
-        customer_name:    form.name,
-        customer_email:   form.email,
-        customer_address: customerAddress,
-        items:            itemLabels.join(", "),
-        items_json:       JSON.stringify(cart.map((i) => ({ id: i.id, qty: i.qty }))),
-      },
+      metadata: { order_no: orderNo },
       success_url: "https://sugarrushco.shop/?payment=success",
       cancel_url:  "https://sugarrushco.shop/",
     });
