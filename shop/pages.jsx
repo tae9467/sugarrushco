@@ -217,23 +217,36 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
 
     const enrichedCart = cart.map((line) => ({ id: line.id, qty: line.qty }));
     const fullAddress  = [form.address, form.address2].filter(Boolean).join(", ") + ", " + form.city + (form.state ? ", " + form.state : "") + " " + form.zip;
+    const SERVER       = window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com";
 
-    try {
-      const res  = await fetch((window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com") + "/create-checkout", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ cart: enrichedCart, form: { ...form, fullAddress }, shipping, orderNo })
-      });
-      const data = await res.json();
-      if (data.url) {
-        window.location.href = data.url;
-      } else {
-        throw new Error(data.error || "Could not create checkout session");
+    // Wake up Render if it's sleeping, then retry checkout up to 3x
+    const tryCheckout = async (attemptsLeft) => {
+      try {
+        const res  = await fetch(SERVER + "/create-checkout", {
+          method:  "POST",
+          headers: { "Content-Type": "application/json" },
+          body:    JSON.stringify({ cart: enrichedCart, form: { ...form, fullAddress }, shipping, orderNo })
+        });
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        } else {
+          throw new Error(data.error || "Could not create checkout session");
+        }
+      } catch(e) {
+        if (attemptsLeft > 1 && e.message === "Failed to fetch") {
+          setCoErr("Waking up the server... retrying in 5 seconds (" + (attemptsLeft - 1) + " attempt" + (attemptsLeft - 1 > 1 ? "s" : "") + " left)");
+          await new Promise((r) => setTimeout(r, 5000));
+          return tryCheckout(attemptsLeft - 1);
+        }
+        setCoErr(e.message === "Failed to fetch"
+          ? "Could not reach the server. Please try again in a moment."
+          : "Payment error: " + e.message);
+        setGoing(false);
       }
-    } catch(e) {
-      setCoErr("Payment error: " + e.message);
-      setGoing(false);
-    }
+    };
+
+    tryCheckout(3);
   };
 
   const inp = (id) => ({
