@@ -144,27 +144,59 @@ function CartDrawer({ open, cart, setQty, remove, subtotal, onClose, onCheckout 
 }
 
 /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Checkout , uses Stripe Payment Link (no backend needed) ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
-const CO_FIELDS = [
-  { id:"name",    label:"Full name", full:false, ph:"Your name" },
-  { id:"email",   label:"Email",     full:false, ph:"you@email.com" },
-  { id:"address", label:"Address",   full:true,  ph:"123 Sweet St" },
-  { id:"city",    label:"City",      full:false, ph:"Sugartown" },
-  { id:"zip",     label:"ZIP",       full:false, ph:"12345" }
-];
-
 function CheckoutPage({ cart, subtotal, go, onPlaced }) {
-  const [form, setForm]   = usePState({ name:"", email:"", address:"", address2:"", city:"", zip:"" });
+  const [form, setForm]   = usePState({ name:"", email:"", address:"", address2:"", city:"", state:"", zip:"" });
   const [errs, setErrs]   = usePState({});
   const [coErr, setCoErr] = usePState("");
   const [going, setGoing] = usePState(false);
+  const [suggestions, setSuggestions] = usePState([]);
+  const [showSug, setShowSug]         = usePState(false);
+  const debounceRef = usePRef(null);
 
   const shipping = subtotal >= 35 || subtotal === 0 ? 0 : 5;
   const total    = parseFloat((subtotal + shipping).toFixed(2));
 
+  // ── Address autocomplete via OpenStreetMap (free, no key) ──
+  const onAddressChange = (val) => {
+    setForm((f) => ({ ...f, address: val }));
+    clearTimeout(debounceRef.current);
+    if (val.length < 3) { setSuggestions([]); setShowSug(false); return; }
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res  = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(val)}&countrycodes=us&addressdetails=1&limit=6`,
+          { headers: { "Accept-Language": "en" } }
+        );
+        const data = await res.json();
+        setSuggestions(data);
+        setShowSug(data.length > 0);
+      } catch {}
+    }, 350);
+  };
+
+  const pickSuggestion = (s) => {
+    const a = s.address || {};
+    const streetNum  = a.house_number || "";
+    const streetName = a.road || a.street || "";
+    const street     = [streetNum, streetName].filter(Boolean).join(" ");
+    const city       = a.city || a.town || a.village || a.county || "";
+    const zip        = a.postcode ? a.postcode.slice(0, 5) : "";
+    const state      = a.state || "";
+    setForm((f) => ({ ...f, address: street, city, zip, state }));
+    setSuggestions([]); setShowSug(false);
+  };
+
+  // ── Validation ──
   const validate = () => {
     const e = {};
-    CO_FIELDS.forEach((f) => { if (!f.optional && !form[f.id].trim()) e[f.id] = "needed, please!"; });
-    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email)) e.email = "hmm, that email looks off";
+    if (!form.name.trim())    e.name    = "needed, please!";
+    if (form.name.trim() && !/^[a-zA-Z\s\-'.]+$/.test(form.name)) e.name = "name can only contain letters";
+    if (!form.email.trim())   e.email   = "needed, please!";
+    if (form.email && !/^\S+@\S+\.\S+$/.test(form.email))         e.email = "hmm, that email looks off";
+    if (!form.address.trim()) e.address = "needed, please!";
+    if (!form.city.trim())    e.city    = "needed, please!";
+    if (!form.zip.trim())     e.zip     = "needed, please!";
+    if (form.zip && !/^\d{5}$/.test(form.zip))                     e.zip   = "ZIP must be exactly 5 digits";
     setErrs(e);
     return Object.keys(e).length === 0;
   };
@@ -182,16 +214,14 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     } catch(e) {}
     localStorage.setItem("sugarrush.pending_order", JSON.stringify({ cart, form, total, orderNo }));
 
-    const enrichedCart = cart.map((line) => {
-      const p = productById(line.id);
-      return { id: line.id, name: p ? p.name : "Product", price: p ? p.price : 0, qty: line.qty };
-    });
+    const enrichedCart = cart.map((line) => ({ id: line.id, qty: line.qty }));
+    const fullAddress  = [form.address, form.address2].filter(Boolean).join(", ") + ", " + form.city + (form.state ? ", " + form.state : "") + " " + form.zip;
 
     try {
       const res  = await fetch((window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com") + "/create-checkout", {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ cart: enrichedCart, form: { ...form, fullAddress: [form.address, form.address2].filter(Boolean).join(", ") + ", " + form.city + " " + form.zip }, shipping, orderNo })
+        body:    JSON.stringify({ cart: enrichedCart, form: { ...form, fullAddress }, shipping, orderNo })
       });
       const data = await res.json();
       if (data.url) {
@@ -205,6 +235,12 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     }
   };
 
+  const inp = (id) => ({
+    className: "input" + (errs[id] ? " is-bad" : ""),
+    value: form[id],
+    onChange: (ev) => setForm((f) => ({ ...f, [id]: ev.target.value }))
+  });
+
   return (
     <div className="rail sec" data-screen-label="Checkout">
       <button className="crumb" onClick={() => go("shop")}>keep shopping</button>
@@ -217,15 +253,85 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
       <div className="co">
         <div>
           <div className="co-form">
-            {CO_FIELDS.map((f) => (
-              <div key={f.id} className={"field" + (f.full ? " field--full" : "")}>
-                <label htmlFor={"co-" + f.id}>{f.label}</label>
-                <input id={"co-" + f.id} className={"input" + (errs[f.id] ? " is-bad" : "")}
-                  placeholder={f.ph} value={form[f.id]}
-                  onChange={(ev) => setForm({ ...form, [f.id]: ev.target.value })} />
-                {errs[f.id] && <span className="field-err">{errs[f.id]}</span>}
-              </div>
-            ))}
+
+            {/* Name */}
+            <div className="field">
+              <label htmlFor="co-name">Full name</label>
+              <input id="co-name" autoComplete="name" placeholder="Your name"
+                {...inp("name")}
+                onChange={(ev) => {
+                  const val = ev.target.value.replace(/[^a-zA-Z\s\-'.]/g, "");
+                  setForm((f) => ({ ...f, name: val }));
+                }} />
+              {errs.name && <span className="field-err">{errs.name}</span>}
+            </div>
+
+            {/* Email */}
+            <div className="field">
+              <label htmlFor="co-email">Email</label>
+              <input id="co-email" autoComplete="email" placeholder="you@email.com" type="email"
+                {...inp("email")} />
+              {errs.email && <span className="field-err">{errs.email}</span>}
+            </div>
+
+            {/* Address line 1 with autocomplete */}
+            <div className="field field--full" style={{ position:"relative" }}>
+              <label htmlFor="co-address">Address line 1</label>
+              <input id="co-address" autoComplete="address-line1" placeholder="123 Sweet St"
+                className={"input" + (errs.address ? " is-bad" : "")}
+                value={form.address}
+                onChange={(ev) => onAddressChange(ev.target.value)}
+                onBlur={() => setTimeout(() => setShowSug(false), 180)} />
+              {errs.address && <span className="field-err">{errs.address}</span>}
+              {showSug && suggestions.length > 0 && (
+                <div style={{
+                  position:"absolute", top:"100%", left:0, right:0, zIndex:99,
+                  background:"white", border:"2px solid var(--ink)", borderRadius:10,
+                  boxShadow:"0 4px 16px rgba(0,0,0,.12)", maxHeight:220, overflowY:"auto"
+                }}>
+                  {suggestions.map((s, i) => (
+                    <button key={i} onMouseDown={() => pickSuggestion(s)} style={{
+                      display:"block", width:"100%", textAlign:"left",
+                      padding:"10px 14px", border:"none", borderBottom: i < suggestions.length-1 ? "1px solid #eee" : "none",
+                      background:"none", cursor:"pointer", fontSize:13, lineHeight:1.4
+                    }}>
+                      {s.display_name}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Address line 2 */}
+            <div className="field field--full">
+              <label htmlFor="co-address2">Address line 2 <span style={{ opacity:.5, fontWeight:400 }}>(apt, suite, unit — optional)</span></label>
+              <input id="co-address2" autoComplete="address-line2" placeholder="Apt 210, Suite B, Unit 4..."
+                className="input" value={form.address2}
+                onChange={(ev) => setForm((f) => ({ ...f, address2: ev.target.value }))} />
+            </div>
+
+            {/* City */}
+            <div className="field">
+              <label htmlFor="co-city">City</label>
+              <input id="co-city" autoComplete="address-level2" placeholder="City"
+                {...inp("city")} />
+              {errs.city && <span className="field-err">{errs.city}</span>}
+            </div>
+
+            {/* ZIP */}
+            <div className="field">
+              <label htmlFor="co-zip">ZIP code</label>
+              <input id="co-zip" autoComplete="postal-code" placeholder="12345"
+                inputMode="numeric" maxLength={5}
+                className={"input" + (errs.zip ? " is-bad" : "")}
+                value={form.zip}
+                onChange={(ev) => {
+                  const val = ev.target.value.replace(/\D/g, "").slice(0, 5);
+                  setForm((f) => ({ ...f, zip: val }));
+                }} />
+              {errs.zip && <span className="field-err">{errs.zip}</span>}
+            </div>
+
           </div>
 
           <div style={{ marginTop: 26 }}>
@@ -238,14 +344,15 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
             </p>
           </div>
         </div>
-        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Right: order summary ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
+
+        {/* Order summary */}
         <div className="co-card">
           <h3>Your order</h3>
           {cart.map((line) => {
             const p = productById(line.id);
             return p ? (
               <div className="co-line" key={line.id}>
-                <span>{p.name} × {line.qty}</span><strong>${p.price * line.qty}</strong>
+                <span>{p.name} x{line.qty}</span><strong>${p.price * line.qty}</strong>
               </div>
             ) : null;
           })}
@@ -263,6 +370,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     </div>
   );
 }
+
 
 /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Order confirmation ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
 function ConfirmPage({ go }) {
