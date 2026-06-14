@@ -11,7 +11,7 @@ Object.assign(window, { TAX_RATE, ADMIN_PASSWORD });
 
 // Config -- fill these in when ready
 // 1. Stripe Payment Link from stripe.com/dashboard
-const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/YOUR_LINK_HERE";
+const STRIPE_PAYMENT_LINK = "https://buy.stripe.com/9B600laXY7E2exE5Ru3ZK00";
 // 2. EmailJS from emailjs.com
 const EMAILJS_SERVICE_ID  = "YOUR_SERVICE_ID";
 const EMAILJS_TEMPLATE_ID = "YOUR_TEMPLATE_ID";

@@ -125,8 +125,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
   const [errs, setErrs] = usePState({});
 
   const shipping = subtotal >= 35 || subtotal === 0 ? 0 : 5;
-  const tax      = parseFloat(((subtotal + shipping) * (window.TAX_RATE || 0.07)).toFixed(2));
-  const total    = parseFloat((subtotal + shipping + tax).toFixed(2));
+  const total    = parseFloat((subtotal + shipping).toFixed(2));
 
   const paymentLinkReady = window.STRIPE_PAYMENT_LINK &&
     !window.STRIPE_PAYMENT_LINK.includes("YOUR_LINK");
@@ -145,7 +144,7 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     // Save order info so confirm page can show it on return
     const orderNo = "SR-" + Math.floor(1000 + Math.random() * 9000);
     // Save order to history
-    const newOrder = { orderNo, cart, form, subtotal, shipping, tax, total, date: new Date().toISOString(), status: "Pending" };
+    const newOrder = { orderNo, cart, form, subtotal, shipping, total, date: new Date().toISOString(), status: "Pending" };
     try {
       const history = JSON.parse(localStorage.getItem("sugarrush.orders") || "[]");
       history.unshift(newOrder);
@@ -226,10 +225,10 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
             <strong>{shipping === 0 ? "free" : "$" + shipping}</strong>
           </div>
           <div className="co-line">
-            <span>Florida Tax (7%)</span>
-            <strong>${tax}</strong>
+            <span>Tax</span>
+            <strong>calculated at checkout</strong>
           </div>
-          <div className="co-total"><span>Total</span><span>${total}</span></div>
+          <div className="co-total"><span>Total</span><span>${total}+tax</span></div>
         </div>
       </div>
     </div>
