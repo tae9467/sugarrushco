@@ -40,18 +40,15 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     const orderNo = (session.metadata || {}).order_no;
     if (!orderNo) { console.error("Webhook: no order_no in metadata"); return res.json({ received: true }); }
 
-    // Look up the pre-saved pending order — all data already verified server-side
     const { data: existing } = await sb.from("orders").select("*").eq("order_ref", orderNo).single();
     if (!existing) { console.error("Webhook: pending order not found:", orderNo); return res.json({ received: true }); }
 
-    // Mark paid and record Stripe payment ID
     await sb.from("orders").update({
       status:            "paid",
       stripe_payment_id: session.payment_intent,
       total:             session.amount_total / 100
     }).eq("order_ref", orderNo);
 
-    // Decrement stock using the verified items we saved at checkout time
     try {
       const items = JSON.parse(existing.items_json || "[]");
       for (const item of items) {
@@ -80,7 +77,9 @@ function adminAuth(req, res, next) {
 app.get("/products", async (req, res) => {
   const isAdmin = req.headers["x-admin-secret"] === ADMIN_SECRET && req.query.all === "true";
   let query = sb.from("products").select("*").order("created_at", { ascending: true });
-  if (!isAdmin) query = query.eq("active", true);
+  if (!isAdmin) {
+    query = query.eq("active", true).eq("deleted", false);
+  }
   const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
@@ -91,9 +90,8 @@ app.post("/create-checkout", async (req, res) => {
   const { cart, form, orderNo } = req.body;
   if (!cart || !cart.length) return res.status(400).json({ error: "cart required" });
   try {
-    // 1. Look up real prices from Supabase — never trust client-sent data
     const ids = [...new Set(cart.map((i) => i.id))];
-    const { data: products, error: dbErr } = await sb.from("products").select("id, name, price").in("id", ids).eq("active", true);
+    const { data: products, error: dbErr } = await sb.from("products").select("id, name, price").in("id", ids).eq("active", true).eq("deleted", false);
     if (dbErr) throw new Error("Could not verify product prices");
 
     const productMap = {};
@@ -125,8 +123,6 @@ app.post("/create-checkout", async (req, res) => {
 
     const customerAddress = form.fullAddress || `${form.address || ""}${form.address2 ? ", " + form.address2 : ""}, ${form.city || ""} ${form.zip || ""}`;
 
-    // 2. Save verified order to Supabase as "pending" BEFORE sending to Stripe
-    //    Webhook will update this to "paid" — no frontend data touches fulfillment
     await sb.from("orders").insert({
       order_ref:        orderNo,
       customer_name:    form.name,
@@ -138,7 +134,6 @@ app.post("/create-checkout", async (req, res) => {
       status:           "pending"
     });
 
-    // 3. Create Stripe session — metadata just carries orderNo for webhook lookup
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
@@ -157,17 +152,59 @@ app.post("/create-checkout", async (req, res) => {
 
 // ── ADMIN: GET /orders ────────────────────────────────────────────────────────
 app.get("/orders", adminAuth, async (req, res) => {
-  const { data, error } = await sb
-    .from("orders")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const hidden  = req.query.hidden  === "true";
+  const deleted = req.query.deleted === "true";
+  let query = sb.from("orders").select("*").order("created_at", { ascending: false });
+  if (deleted) {
+    query = query.eq("deleted", true);
+  } else if (hidden) {
+    query = query.eq("hidden", true).eq("deleted", false);
+  } else {
+    query = query.eq("hidden", false).eq("deleted", false);
+  }
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
+// ── ADMIN: PUT /admin/orders/:id — edit order info or hide/unhide ─────────────
+app.put("/admin/orders/:id", adminAuth, async (req, res) => {
+  const { customer_name, customer_email, customer_address, hidden, deleted } = req.body;
+  const updates = {};
+  if (customer_name    !== undefined) updates.customer_name    = customer_name;
+  if (customer_email   !== undefined) updates.customer_email   = customer_email;
+  if (customer_address !== undefined) updates.customer_address = customer_address;
+  if (hidden           !== undefined) updates.hidden           = hidden;
+  if (deleted          !== undefined) updates.deleted          = deleted;
+  const { data, error } = await sb.from("orders").update(updates).eq("order_no", req.params.id).select().single();
+  if (error) return res.status(500).json({ error: error.message });
+  res.json(data);
+});
+
+// ── ADMIN: DELETE /admin/orders/:id — refund + soft delete ───────────────────
+app.delete("/admin/orders/:id", adminAuth, async (req, res) => {
+  const { data: orders } = await sb.from("orders").select("*").eq("order_no", req.params.id).limit(1);
+  if (!orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
+  const order = orders[0];
+
+  // Issue Stripe refund if payment exists
+  if (order.stripe_payment_id) {
+    try {
+      await stripe.refunds.create({ payment_intent: order.stripe_payment_id });
+    } catch(e) {
+      console.error("Stripe refund error:", e.message);
+      return res.status(500).json({ error: "Refund failed: " + e.message });
+    }
+  }
+
+  // Soft delete the order
+  await sb.from("orders").update({ deleted: true, hidden: false }).eq("order_no", req.params.id);
+  res.json({ ok: true });
+});
+
 // ── ADMIN: POST /admin/products — create product ──────────────────────────────
 app.post("/admin/products", adminAuth, async (req, res) => {
-  const { name, price, cat, blurb, notes, stock, image_url } = req.body;
+  const { name, price, cat, blurb, notes, stock, image_url, images } = req.body;
   if (!name || !price || !cat) return res.status(400).json({ error: "name, price, cat required" });
   const { data, error } = await sb.from("products").insert({
     name, price: parseFloat(price), cat,
@@ -175,7 +212,9 @@ app.post("/admin/products", adminAuth, async (req, res) => {
     notes: notes || "",
     stock: parseInt(stock) || 0,
     image_url: image_url || "",
-    active: true
+    images: images || "",
+    active: true,
+    deleted: false
   }).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
@@ -183,25 +222,32 @@ app.post("/admin/products", adminAuth, async (req, res) => {
 
 // ── ADMIN: PUT /admin/products/:id — update product ───────────────────────────
 app.put("/admin/products/:id", adminAuth, async (req, res) => {
-  const { name, price, cat, blurb, notes, stock, image_url, active } = req.body;
+  const { name, price, cat, blurb, notes, stock, image_url, images, active, deleted } = req.body;
   const updates = {};
-  if (name      !== undefined) updates.name      = name;
-  if (price     !== undefined) updates.price     = parseFloat(price);
-  if (cat       !== undefined) updates.cat       = cat;
-  if (blurb     !== undefined) updates.blurb     = blurb;
-  if (notes     !== undefined) updates.notes     = notes;
-  if (stock     !== undefined) updates.stock     = parseInt(stock);
+  if (name    !== undefined) updates.name      = name;
+  if (price   !== undefined) updates.price     = parseFloat(price);
+  if (cat     !== undefined) updates.cat       = cat;
+  if (blurb   !== undefined) updates.blurb     = blurb;
+  if (notes   !== undefined) updates.notes     = notes;
+  if (stock   !== undefined) updates.stock     = parseInt(stock);
   if (image_url !== undefined) updates.image_url = image_url;
-  if (active    !== undefined) updates.active    = active;
-
+  if (images  !== undefined) updates.images    = images;
+  if (active  !== undefined) updates.active    = active;
+  if (deleted !== undefined) {
+    updates.deleted = deleted;
+    if (deleted) updates.deleted_at = new Date().toISOString();
+    else { updates.deleted_at = null; updates.active = true; }
+  }
   const { data, error } = await sb.from("products").update(updates).eq("id", req.params.id).select().single();
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
 });
 
-// ── ADMIN: DELETE /admin/products/:id ────────────────────────────────────────
+// ── ADMIN: DELETE /admin/products/:id — soft delete ──────────────────────────
 app.delete("/admin/products/:id", adminAuth, async (req, res) => {
-  const { error } = await sb.from("products").delete().eq("id", req.params.id);
+  const { error } = await sb.from("products").update({
+    deleted: true, deleted_at: new Date().toISOString(), active: false
+  }).eq("id", req.params.id);
   if (error) return res.status(500).json({ error: error.message });
   res.json({ ok: true });
 });
@@ -211,11 +257,11 @@ app.post("/track", adminAuth, async (req, res) => {
   const { order_id, tracking_number } = req.body;
   if (!order_id || !tracking_number) return res.status(400).json({ error: "order_id and tracking_number required" });
 
-  const { data: orders, error: fetchErr } = await sb.from("orders").select("*").eq("id", order_id).limit(1);
+  const { data: orders, error: fetchErr } = await sb.from("orders").select("*").eq("order_no", order_id).limit(1);
   if (fetchErr || !orders || orders.length === 0) return res.status(404).json({ error: "Order not found" });
   const order = orders[0];
 
-  const { error: updateErr } = await sb.from("orders").update({ tracking_number, tracking_sent: true, status: "shipped" }).eq("id", order_id);
+  const { error: updateErr } = await sb.from("orders").update({ tracking_number, tracking_sent: true, status: "shipped" }).eq("order_no", order_id);
   if (updateErr) return res.status(500).json({ error: updateErr.message });
 
   const uspsUrl = `https://tools.usps.com/go/TrackConfirmAction?tLabels=${tracking_number}`;
@@ -231,7 +277,7 @@ app.post("/track", adminAuth, async (req, res) => {
           <p style="margin:0 0 24px;font-size:16px;">Hi ${order.customer_name}, your goodies are on their way!</p>
           <div style="background:#f8f4ff;border-radius:10px;padding:20px 24px;margin-bottom:24px;">
             <p style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;opacity:.6;">Order</p>
-            <p style="margin:0 0 16px;font-weight:700;font-size:18px;">${order.order_no}</p>
+            <p style="margin:0 0 16px;font-weight:700;font-size:18px;">${order.order_ref || order.order_no}</p>
             <p style="margin:0 0 6px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;opacity:.6;">USPS Tracking Number</p>
             <p style="margin:0;font-weight:700;font-size:20px;letter-spacing:.05em;">${tracking_number}</p>
           </div>

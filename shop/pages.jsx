@@ -916,12 +916,183 @@ function ProductsTab({ secret }) {
   );
 }
 
+function OrderCard({ order, secret, onUpdate, onHide, onDelete, tracking, setTracking, sending, sent, onSendTracking, showRestore, onRestore }) {
+  const [editing, setEditing] = usePState(false);
+  const [editForm, setEditForm] = usePState({ customer_name: order.customer_name, customer_email: order.customer_email, customer_address: order.customer_address });
+  const [saving, setSaving] = usePState(false);
+  const isShipped = order.tracking_sent || order.status === "shipped";
+  const key = order.order_no;
+
+  const saveEdit = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
+        method: "PUT", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body: JSON.stringify(editForm)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
+      onUpdate({ ...order, ...editForm });
+      setEditing(false);
+    } catch(e) { alert("Save failed: " + e.message); }
+    setSaving(false);
+  };
+
+  return (
+    <div style={{ border:"3px solid var(--ink)", borderRadius:16, padding:"22px 26px", marginBottom:18, background:"var(--tld-white)", boxShadow:"var(--tld-shadow)" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
+        <div>
+          <span style={{ fontFamily:"var(--disp)", fontWeight:700, fontSize:18 }}>{order.order_ref || order.order_no}</span>
+          <span style={{ marginLeft:12, fontSize:12, fontWeight:700, textTransform:"uppercase", letterSpacing:".06em", padding:"3px 10px", borderRadius:99,
+            background: isShipped ? "#d4f7d4" : order.status === "pending" ? "#e8e8e8" : "#fff3cd",
+            color:      isShipped ? "#1a6b1a" : order.status === "pending" ? "#555" : "#7a5800"
+          }}>{order.status || "paid"}</span>
+        </div>
+        <div style={{ display:"flex", gap:6, alignItems:"center", flexWrap:"wrap" }}>
+          <span style={{ fontSize:13, opacity:.55 }}>{order.created_at ? new Date(order.created_at).toLocaleDateString() : ""}</span>
+          {showRestore ? (
+            <button className="btn btn--sm" style={{ background:"#1a6b1a", borderColor:"#1a6b1a" }} onClick={onRestore}>Restore</button>
+          ) : (
+            <React.Fragment>
+              <button className="btn btn--sm btn--ghost" onClick={() => { setEditing((e) => !e); setEditForm({ customer_name: order.customer_name, customer_email: order.customer_email, customer_address: order.customer_address }); }}>
+                {editing ? "Cancel" : "Edit"}
+              </button>
+              <button className="btn btn--sm btn--ghost" style={{ borderColor:"#888", color:"#555" }} onClick={onHide}>
+                {order.hidden ? "Unhide" : "Hide"}
+              </button>
+              <button className="btn btn--sm" style={{ background:"#c00", borderColor:"#c00" }} onClick={onDelete}>
+                Delete & Refund
+              </button>
+            </React.Fragment>
+          )}
+        </div>
+      </div>
+
+      {editing ? (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:14 }}>
+          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+            <label style={{ fontSize:11, fontWeight:700, opacity:.6, textTransform:"uppercase" }}>Name</label>
+            <input className="input" value={editForm.customer_name} onChange={(e) => setEditForm((f) => ({...f, customer_name: e.target.value}))} />
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:4 }}>
+            <label style={{ fontSize:11, fontWeight:700, opacity:.6, textTransform:"uppercase" }}>Email</label>
+            <input className="input" value={editForm.customer_email} onChange={(e) => setEditForm((f) => ({...f, customer_email: e.target.value}))} />
+          </div>
+          <div style={{ display:"flex", flexDirection:"column", gap:4, gridColumn:"1/-1" }}>
+            <label style={{ fontSize:11, fontWeight:700, opacity:.6, textTransform:"uppercase" }}>Address</label>
+            <input className="input" value={editForm.customer_address} onChange={(e) => setEditForm((f) => ({...f, customer_address: e.target.value}))} />
+          </div>
+          <div style={{ gridColumn:"1/-1", display:"flex", gap:8 }}>
+            <button className="btn btn--sm" onClick={saveEdit} disabled={saving}>{saving ? "Saving…" : "Save changes"}</button>
+            <button className="btn btn--sm btn--ghost" onClick={() => setEditing(false)}>Cancel</button>
+          </div>
+        </div>
+      ) : (
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 24px", fontSize:14, marginBottom:14 }}>
+          <span><strong>Name:</strong> {order.customer_name}</span>
+          <span><strong>Email:</strong> {order.customer_email}</span>
+          <span style={{ gridColumn:"1/-1" }}><strong>Address:</strong> {order.customer_address}</span>
+          <span><strong>Total:</strong> ${Number(order.total).toFixed(2)}</span>
+          <span><strong>Items:</strong> {order.items}</span>
+        </div>
+      )}
+
+      {!showRestore && (isShipped ? (
+        <div style={{ background:"#d4f7d4", borderRadius:10, padding:"10px 16px", fontSize:14 }}>
+          Tracking sent: <strong>{order.tracking_number}</strong>
+        </div>
+      ) : (
+        <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
+          <input className="input" style={{ flex:1, minWidth:200, maxWidth:340 }}
+            placeholder="USPS tracking number"
+            value={tracking[key] || ""}
+            onChange={(e) => setTracking((t) => ({ ...t, [key]: e.target.value }))} />
+          <button className="btn btn--sm"
+            disabled={sending[key] || sent[key]}
+            style={(sending[key] || sent[key]) ? { opacity:.65 } : null}
+            onClick={() => onSendTracking(order)}>
+            {sending[key] ? "Sending…" : sent[key] ? "Sent!" : "Send tracking email"}
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function HiddenProductsTab({ secret }) {
+  const [products, setProducts] = usePState([]);
+  usePEffect(() => {
+    fetch(SERVER_URL + "/products?all=true", { headers: { "x-admin-secret": secret } })
+      .then((r) => r.json()).then((data) => setProducts(Array.isArray(data) ? data.filter((p) => p.active === false && !p.deleted) : []));
+  }, []);
+  const unhide = async (p) => {
+    await fetch(SERVER_URL + "/admin/products/" + p.id, {
+      method: "PUT", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+      body: JSON.stringify({ active: true })
+    });
+    setProducts((prev) => prev.filter((x) => x.id !== p.id));
+  };
+  return (
+    <div style={{ marginTop: 32 }}>
+      <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 14px" }}>Hidden Products</h3>
+      {products.length === 0 && <p style={{ opacity:.5 }}>No hidden products.</p>}
+      {products.map((p) => (
+        <div key={p.id} style={{ ...CARD_STYLE, opacity:.6 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+            <div>
+              <strong>{p.name}</strong>
+              <span style={{ marginLeft:10, fontSize:13, opacity:.6 }}>${Number(p.price).toFixed(2)}</span>
+            </div>
+            <button className="btn btn--sm" onClick={() => unhide(p)}>Unhide</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DeletedProductsTab({ secret }) {
+  const [products, setProducts] = usePState([]);
+  const load = () => {
+    fetch(SERVER_URL + "/products?all=true", { headers: { "x-admin-secret": secret } })
+      .then((r) => r.json()).then((data) => setProducts(Array.isArray(data) ? data.filter((p) => p.deleted) : []));
+  };
+  usePEffect(() => { load(); }, []);
+  const restore = async (p) => {
+    await fetch(SERVER_URL + "/admin/products/" + p.id, {
+      method: "PUT", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+      body: JSON.stringify({ deleted: false })
+    });
+    load();
+  };
+  return (
+    <div style={{ marginTop: 32 }}>
+      <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 14px" }}>Deleted Products</h3>
+      {products.length === 0 && <p style={{ opacity:.5 }}>No deleted products.</p>}
+      {products.map((p) => (
+        <div key={p.id} style={{ ...CARD_STYLE, opacity:.55 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8 }}>
+            <div>
+              <strong>{p.name}</strong>
+              <span style={{ marginLeft:10, fontSize:13, opacity:.6 }}>${Number(p.price).toFixed(2)}</span>
+              {p.deleted_at && <span style={{ marginLeft:10, fontSize:12, opacity:.5 }}>deleted {new Date(p.deleted_at).toLocaleDateString()}</span>}
+            </div>
+            <button className="btn btn--sm" style={{ background:"#1a6b1a", borderColor:"#1a6b1a" }} onClick={() => restore(p)}>Restore</button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AdminPage({ go }) {
   const [authed,   setAuthed]   = usePState(false);
   const [password, setPassword] = usePState("");
   const [secret,   setSecret]   = usePState("");
   const [tab,      setTab]      = usePState("orders");
   const [orders,   setOrders]   = usePState([]);
+  const [hiddenOrders,  setHiddenOrders]  = usePState([]);
+  const [deletedOrders, setDeletedOrders] = usePState([]);
   const [loading,  setLoading]  = usePState(false);
   const [err,      setErr]      = usePState("");
   const [tracking, setTracking] = usePState({});
@@ -943,18 +1114,22 @@ function AdminPage({ go }) {
     if (!silent) setLoading(true);
     setErr("");
     try {
-      const res  = await fetch(SERVER_URL + "/orders", {
-        headers: { "x-admin-secret": pwd || secret }
-      });
-      if (!res.ok) throw new Error("Auth failed");
-      const data = await res.json();
+      const hdrs = { "x-admin-secret": pwd || secret };
+      const [main, hidden, deleted] = await Promise.all([
+        fetch(SERVER_URL + "/orders", { headers: hdrs }).then((r) => r.json()),
+        fetch(SERVER_URL + "/orders?hidden=true", { headers: hdrs }).then((r) => r.json()),
+        fetch(SERVER_URL + "/orders?deleted=true", { headers: hdrs }).then((r) => r.json()),
+      ]);
+      if (main.error) throw new Error(main.error);
       setOrders((prev) => {
-        if (prev.length && data.length > prev.length) {
-          setNewCount(data.length - prev.length);
+        if (prev.length && main.length > prev.length) {
+          setNewCount(main.length - prev.length);
           try { new Audio("https://www.soundjay.com/buttons/sounds/button-09a.mp3").play(); } catch {}
         }
-        return data;
+        return main;
       });
+      setHiddenOrders(Array.isArray(hidden) ? hidden : []);
+      setDeletedOrders(Array.isArray(deleted) ? deleted : []);
     } catch (e) {
       setErr("Could not load orders: " + e.message);
     }
@@ -975,21 +1150,54 @@ function AdminPage({ go }) {
     setErr("");
     try {
       const res = await fetch(SERVER_URL + "/track", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json", "x-admin-secret": secret },
-        body:    JSON.stringify({ order_id: order.order_no, tracking_number: num })
+        method: "POST", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+        body: JSON.stringify({ order_id: order.order_no, tracking_number: num })
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Failed");
       setSent((s) => ({ ...s, [key]: true }));
-      setOrders((prev) => prev.map((o) =>
-        o.order_no === order.order_no ? { ...o, tracking_number: num, tracking_sent: true, status: "shipped" } : o
-      ));
-    } catch (e) {
-      setErr("Error: " + e.message);
-    }
+      setOrders((prev) => prev.map((o) => o.order_no === order.order_no ? { ...o, tracking_number: num, tracking_sent: true, status: "shipped" } : o));
+    } catch (e) { setErr("Error: " + e.message); }
     setSending((s) => ({ ...s, [key]: false }));
   };
+
+  const hideOrder = async (order) => {
+    await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
+      method: "PUT", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+      body: JSON.stringify({ hidden: !order.hidden })
+    });
+    fetchOrders();
+  };
+
+  const deleteOrder = async (order) => {
+    const res = await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
+      method: "DELETE", headers: { "x-admin-secret": secret }
+    });
+    const data = await res.json();
+    if (!res.ok) { setErr("Delete failed: " + (data.error || "Unknown error")); return; }
+    fetchOrders();
+  };
+
+  const restoreOrder = async (order) => {
+    await fetch(SERVER_URL + "/admin/orders/" + order.order_no, {
+      method: "PUT", headers: { "Content-Type": "application/json", "x-admin-secret": secret },
+      body: JSON.stringify({ deleted: false, hidden: false })
+    });
+    fetchOrders();
+  };
+
+  const updateOrder = (updated) => {
+    setOrders((prev) => prev.map((o) => o.order_no === updated.order_no ? updated : o));
+  };
+
+  const orderCardProps = (order, extra) => ({
+    order, secret, onUpdate: updateOrder,
+    onHide: () => hideOrder(order),
+    onDelete: () => deleteOrder(order),
+    tracking, setTracking, sending, sent,
+    onSendTracking: sendTracking,
+    ...extra
+  });
 
   if (!authed) return (
     <div className="confirm-wrap" data-screen-label="Admin login">
@@ -1009,22 +1217,28 @@ function AdminPage({ go }) {
     </div>
   );
 
+  const TABS = [
+    ["orders",   "📦 Orders"],
+    ["products", "🛍️ Products"],
+    ["hidden",   "👁️ Hidden"],
+    ["deleted",  "🗑️ Deleted"],
+  ];
+
   return (
     <div className="rail sec" data-screen-label="Admin">
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom: 20, flexWrap:"wrap", gap: 12 }}>
+      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:20, flexWrap:"wrap", gap:12 }}>
         <h1 style={{ margin:0, fontFamily:"var(--disp)", fontSize:"clamp(24px,4vw,36px)" }}>Admin Dashboard</h1>
-        <div style={{ display:"flex", gap: 10, alignItems:"center" }}>
+        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
           <span style={{ fontSize:12, opacity:.5 }}>auto-refreshes every 30s</span>
-          <button className="btn btn--sm" onClick={() => { if (tab === "orders") fetchOrders(); }}>Refresh now</button>
+          <button className="btn btn--sm" onClick={() => fetchOrders()}>Refresh now</button>
           <button className="btn btn--ghost btn--sm" onClick={() => go("home")}>Back to shop</button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div style={{ display:"flex", gap:0, marginBottom:28, borderBottom:"3px solid var(--ink)" }}>
-        {[["orders","📦 Orders"],["products","🛍️ Products"]].map(([id,label]) => (
+      <div style={{ display:"flex", gap:0, marginBottom:28, borderBottom:"3px solid var(--ink)", flexWrap:"wrap" }}>
+        {TABS.map(([id, label]) => (
           <button key={id} onClick={() => setTab(id)} style={{
-            padding:"10px 24px", fontFamily:"var(--font-ui)", fontWeight:700, fontSize:15,
+            padding:"10px 20px", fontFamily:"var(--font-ui)", fontWeight:700, fontSize:14,
             border:"none", borderBottom: tab===id ? "3px solid var(--acc2)" : "3px solid transparent",
             background:"none", cursor:"pointer", color: tab===id ? "var(--ink)" : "rgba(0,0,0,.45)",
             marginBottom:"-3px"
@@ -1034,79 +1248,53 @@ function AdminPage({ go }) {
 
       {tab === "products" && <ProductsTab secret={secret} />}
 
-      {tab === "orders" && (<React.Fragment>
-      {newCount > 0 && (
-        <div onClick={() => setNewCount(0)} style={{
-          background:"var(--acc2)", color:"white", borderRadius:10, padding:"12px 18px",
-          marginBottom:16, fontWeight:700, fontSize:15, cursor:"pointer",
-          display:"flex", alignItems:"center", justifyContent:"space-between"
-        }}>
-          <span>🛍️ {newCount} new order{newCount > 1 ? "s" : ""} just came in!</span>
-          <span style={{ fontSize:12, opacity:.8 }}>click to dismiss</span>
-        </div>
-      )}
-      {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:10, padding:"12px 16px", marginBottom:20, color:"#900" }}>{err}</div>}
-
-      {loading && <p style={{ textAlign:"center", opacity:.6 }}>Loading orders...</p>}
-
-      {!loading && orders.length === 0 && (
-        <div style={{ textAlign:"center", opacity:.55, padding:"60px 0" }}>
-          <CherryIcon size={40} />
-          <p style={{ marginTop:14 }}>No orders yet, they'll show up here once Stripe payments come in.</p>
+      {tab === "hidden" && (
+        <div>
+          <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 20px" }}>Hidden Orders</h3>
+          {hiddenOrders.length === 0 && <p style={{ opacity:.5 }}>No hidden orders.</p>}
+          {hiddenOrders.map((order) => (
+            <OrderCard key={order.order_no} {...orderCardProps(order)} />
+          ))}
+          <HiddenProductsTab secret={secret} />
         </div>
       )}
 
-      {orders.map((order) => {
-        const isShipped = order.tracking_sent || order.status === "shipped";
-        return (
-          <div key={order.order_no} style={{
-            border: "3px solid var(--ink)", borderRadius: 16, padding: "22px 26px",
-            marginBottom: 18, background: "var(--tld-white)",
-            boxShadow: "var(--tld-shadow)"
-          }}>
-            <div style={{ display:"flex", justifyContent:"space-between", flexWrap:"wrap", gap:8, marginBottom:10 }}>
-              <div>
-                <span style={{ fontFamily:"var(--disp)", fontWeight:700, fontSize:18 }}>{order.order_ref || order.order_no}</span>
-                <span style={{
-                  marginLeft:12, fontSize:12, fontWeight:700, textTransform:"uppercase",
-                  letterSpacing:".06em", padding:"3px 10px", borderRadius:99,
-                  background: isShipped ? "#d4f7d4" : "#fff3cd",
-                  color:      isShipped ? "#1a6b1a" : "#7a5800"
-                }}>{order.status || "paid"}</span>
-              </div>
-              <span style={{ fontSize:13, opacity:.55 }}>{order.created_at ? new Date(order.created_at).toLocaleDateString() : ""}</span>
-            </div>
+      {tab === "deleted" && (
+        <div>
+          <h3 style={{ fontFamily:"var(--disp)", fontSize:20, margin:"0 0 20px" }}>Deleted Orders</h3>
+          {deletedOrders.length === 0 && <p style={{ opacity:.5 }}>No deleted orders.</p>}
+          {deletedOrders.map((order) => (
+            <OrderCard key={order.order_no} {...orderCardProps(order, { showRestore: true, onRestore: () => restoreOrder(order) })} />
+          ))}
+          <DeletedProductsTab secret={secret} />
+        </div>
+      )}
 
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"4px 24px", fontSize:14, marginBottom:14 }}>
-              <span><strong>Name:</strong> {order.customer_name}</span>
-              <span><strong>Email:</strong> {order.customer_email}</span>
-              <span style={{ gridColumn:"1/-1" }}><strong>Address:</strong> {order.customer_address}</span>
-              <span><strong>Total:</strong> ${Number(order.total).toFixed(2)}</span>
-              <span><strong>Items:</strong> {order.items}</span>
+      {tab === "orders" && (
+        <React.Fragment>
+          {newCount > 0 && (
+            <div onClick={() => setNewCount(0)} style={{
+              background:"var(--acc2)", color:"white", borderRadius:10, padding:"12px 18px",
+              marginBottom:16, fontWeight:700, fontSize:15, cursor:"pointer",
+              display:"flex", alignItems:"center", justifyContent:"space-between"
+            }}>
+              <span>🛍️ {newCount} new order{newCount > 1 ? "s" : ""} just came in!</span>
+              <span style={{ fontSize:12, opacity:.8 }}>click to dismiss</span>
             </div>
-
-            {isShipped ? (
-              <div style={{ background:"#d4f7d4", borderRadius:10, padding:"10px 16px", fontSize:14 }}>
-                Tracking sent: <strong>{order.tracking_number}</strong>
-              </div>
-            ) : (
-              <div style={{ display:"flex", gap:10, alignItems:"center", flexWrap:"wrap" }}>
-                <input className="input" style={{ flex:1, minWidth:200, maxWidth:340 }}
-                  placeholder="USPS tracking number"
-                  value={tracking[order.order_no] || ""}
-                  onChange={(e) => setTracking((t) => ({ ...t, [order.order_no]: e.target.value }))} />
-                <button className="btn btn--sm"
-                  disabled={sending[order.order_no] || sent[order.order_no]}
-                  style={(sending[order.order_no] || sent[order.order_no]) ? { opacity:.65 } : null}
-                  onClick={() => sendTracking(order)}>
-                  {sending[order.order_no] ? "Sending…" : sent[order.order_no] ? "Sent!" : "Send tracking email"}
-                </button>
-              </div>
-            )}
-          </div>
-        );
-      })}
-      </React.Fragment>)}
+          )}
+          {err && <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:10, padding:"12px 16px", marginBottom:20, color:"#900" }}>{err}</div>}
+          {loading && <p style={{ textAlign:"center", opacity:.6 }}>Loading orders...</p>}
+          {!loading && orders.length === 0 && (
+            <div style={{ textAlign:"center", opacity:.55, padding:"60px 0" }}>
+              <CherryIcon size={40} />
+              <p style={{ marginTop:14 }}>No orders yet — they'll show up here once Stripe payments come in.</p>
+            </div>
+          )}
+          {orders.map((order) => (
+            <OrderCard key={order.order_no} {...orderCardProps(order)} />
+          ))}
+        </React.Fragment>
+      )}
     </div>
   );
 }
