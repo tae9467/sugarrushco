@@ -33,33 +33,31 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
     return res.status(400).send("Webhook Error: " + err.message);
   }
 
-  if (event.type === "payment_intent.succeeded") {
-    const pi   = event.data.object;
-    const meta = pi.metadata || {};
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const meta    = session.metadata || {};
     const orderNo = meta.order_no || ("SR-" + Date.now());
 
     // Decrement stock for each item ordered
-    if (meta.items) {
-      try {
-        const items = JSON.parse(meta.items_json || "[]");
-        for (const item of items) {
-          const { data: prod } = await sb.from("products").select("stock").eq("id", item.id).single();
-          if (prod) {
-            const newStock = Math.max(0, (prod.stock || 0) - (item.qty || 1));
-            await sb.from("products").update({ stock: newStock }).eq("id", item.id);
-          }
+    try {
+      const items = JSON.parse(meta.items_json || "[]");
+      for (const item of items) {
+        const { data: prod } = await sb.from("products").select("stock").eq("id", item.id).single();
+        if (prod) {
+          const newStock = Math.max(0, (prod.stock || 0) - (item.qty || 1));
+          await sb.from("products").update({ stock: newStock }).eq("id", item.id);
         }
-      } catch(e) { console.error("Stock decrement error:", e.message); }
-    }
+      }
+    } catch(e) { console.error("Stock decrement error:", e.message); }
 
     const { error } = await sb.from("orders").insert({
       order_no:          orderNo,
-      customer_name:     meta.customer_name  || "",
-      customer_email:    meta.customer_email || "",
+      customer_name:     meta.customer_name   || "",
+      customer_email:    meta.customer_email  || "",
       customer_address:  meta.customer_address || "",
-      items:             meta.items           || "",
-      total:             pi.amount / 100,
-      stripe_payment_id: pi.id,
+      items:             meta.items            || "",
+      total:             session.amount_total / 100,
+      stripe_payment_id: session.payment_intent,
       status:            "paid"
     });
     if (error) console.error("Supabase insert error:", error.message);
@@ -80,13 +78,54 @@ function adminAuth(req, res, next) {
 
 // ── PUBLIC: GET /products ─────────────────────────────────────────────────────
 app.get("/products", async (req, res) => {
-  const { data, error } = await sb
-    .from("products")
-    .select("*")
-    .eq("active", true)
-    .order("created_at", { ascending: true });
+  const isAdmin = req.headers["x-admin-secret"] === ADMIN_SECRET && req.query.all === "true";
+  let query = sb.from("products").select("*").order("created_at", { ascending: true });
+  if (!isAdmin) query = query.eq("active", true);
+  const { data, error } = await query;
   if (error) return res.status(500).json({ error: error.message });
   res.json(data);
+});
+
+// ── PUBLIC: POST /create-checkout ────────────────────────────────────────────
+app.post("/create-checkout", async (req, res) => {
+  const { cart, form, shipping, orderNo } = req.body;
+  if (!cart || !cart.length) return res.status(400).json({ error: "cart required" });
+  try {
+    const line_items = cart.map((item) => ({
+      price_data: {
+        currency: "usd",
+        product_data: { name: item.name },
+        unit_amount: Math.round(item.price * 100),
+      },
+      quantity: item.qty,
+    }));
+    if (shipping && shipping > 0) {
+      line_items.push({
+        price_data: { currency: "usd", product_data: { name: "Shipping" }, unit_amount: Math.round(shipping * 100) },
+        quantity: 1,
+      });
+    }
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items,
+      customer_email: form.email,
+      automatic_tax: { enabled: true },
+      metadata: {
+        order_no:          orderNo,
+        customer_name:     form.name,
+        customer_email:    form.email,
+        customer_address:  `${form.address}, ${form.city} ${form.zip}`,
+        items:             cart.map((i) => `${i.name} x${i.qty}`).join(", "),
+        items_json:        JSON.stringify(cart.map((i) => ({ id: i.id, qty: i.qty }))),
+      },
+      success_url: "https://sugarrushco.shop/?payment=success",
+      cancel_url:  "https://sugarrushco.shop/",
+    });
+    res.json({ url: session.url });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 // ── ADMIN: GET /orders ────────────────────────────────────────────────────────

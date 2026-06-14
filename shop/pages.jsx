@@ -1,4 +1,4 @@
-// Sugar Rush Co. shop, product, cart drawer, checkout, confirm, about, contact
+﻿// Sugar Rush Co. shop, product, cart drawer, checkout, confirm, about, contact
 const { useState: usePState, useMemo: usePMemo, useEffect: usePEffect, useRef: usePRef } = React;
 
 /* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Shop page ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */
@@ -153,14 +153,13 @@ const CO_FIELDS = [
 ];
 
 function CheckoutPage({ cart, subtotal, go, onPlaced }) {
-  const [form, setForm] = usePState({ name:"", email:"", address:"", city:"", zip:"" });
-  const [errs, setErrs] = usePState({});
+  const [form, setForm]   = usePState({ name:"", email:"", address:"", city:"", zip:"" });
+  const [errs, setErrs]   = usePState({});
+  const [coErr, setCoErr] = usePState("");
+  const [going, setGoing] = usePState(false);
 
   const shipping = subtotal >= 35 || subtotal === 0 ? 0 : 5;
   const total    = parseFloat((subtotal + shipping).toFixed(2));
-
-  const paymentLinkReady = window.STRIPE_PAYMENT_LINK &&
-    !window.STRIPE_PAYMENT_LINK.includes("YOUR_LINK");
 
   const validate = () => {
     const e = {};
@@ -170,12 +169,11 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     return Object.keys(e).length === 0;
   };
 
-  const place = () => {
+  const place = async () => {
     if (!validate()) return;
+    setCoErr(""); setGoing(true);
 
-    // Save order info so confirm page can show it on return
-    const orderNo = "SR-" + Math.floor(1000 + Math.random() * 9000);
-    // Save order to history
+    const orderNo  = "SR-" + Math.floor(1000 + Math.random() * 9000);
     const newOrder = { orderNo, cart, form, subtotal, shipping, total, date: new Date().toISOString(), status: "Pending" };
     try {
       const history = JSON.parse(localStorage.getItem("sugarrush.orders") || "[]");
@@ -184,38 +182,39 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
     } catch(e) {}
     localStorage.setItem("sugarrush.pending_order", JSON.stringify({ cart, form, total, orderNo }));
 
-    if (paymentLinkReady) {
-      // Build Payment Link URL , pre-fills amount + email on Stripe's page
-      const url = new URL(window.STRIPE_PAYMENT_LINK);
-      url.searchParams.set("prefilled_amount", Math.round(total * 100));
-      url.searchParams.set("prefilled_email",  form.email);
-      // Tell Stripe where to send them after payment (your site + ?payment=success)
-      // Set this in your Stripe Payment Link settings ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ After payment ÃƒÂ¢Ã¢â‚¬Â Ã¢â‚¬â„¢ Redirect to URL
-      window.location.href = url.toString();
-    } else {
-      // Demo mode , no Payment Link configured yet
-      onPlaced();
+    const enrichedCart = cart.map((line) => {
+      const p = productById(line.id);
+      return { id: line.id, name: p ? p.name : "Product", price: p ? p.price : 0, qty: line.qty };
+    });
+
+    try {
+      const res  = await fetch((window.ADMIN_SERVER_URL || "https://sugarrushco.onrender.com") + "/create-checkout", {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ cart: enrichedCart, form, shipping, orderNo })
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        throw new Error(data.error || "Could not create checkout session");
+      }
+    } catch(e) {
+      setCoErr("Payment error: " + e.message);
+      setGoing(false);
     }
   };
 
   return (
     <div className="rail sec" data-screen-label="Checkout">
-      <button className="crumb" onClick={() => go("shop")}>← keep shopping</button>
+      <button className="crumb" onClick={() => go("shop")}>keep shopping</button>
       <SectionHead title="Checkout" />
 
-      {!paymentLinkReady && (
-        <div className="stripe-demo-note" style={{ marginBottom: 24 }}>
-          <span>🔗</span>
-          <span>
-            <strong>Payment Link not connected yet.</strong> Create a Payment Link in your Stripe
-            dashboard (set price to "Customer chooses"), paste it into <code>shop/app.jsx</code>, and
-            set the redirect URL to <code>your-site-url/?payment=success</code>. Until then, checkout works in demo mode.
-          </span>
-        </div>
+      {coErr && (
+        <div style={{ background:"#ffe0e0", border:"2px solid #c00", borderRadius:8, padding:"10px 14px", marginBottom:16, color:"#900", fontSize:14 }}>{coErr}</div>
       )}
 
       <div className="co">
-        {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Left: shipping info ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <div>
           <div className="co-form">
             {CO_FIELDS.map((f) => (
@@ -230,17 +229,15 @@ function CheckoutPage({ cart, subtotal, go, onPlaced }) {
           </div>
 
           <div style={{ marginTop: 26 }}>
-            <button className="btn btn--wide" onClick={place}>
-              {paymentLinkReady ? `Continue to payment · ${total}` : `Place order · ${total}`}
+            <button className="btn btn--wide" onClick={place} disabled={going}
+              style={going ? { opacity:.65, cursor:"wait" } : null}>
+              {going ? "Taking you to payment..." : `Continue to payment · $${total}`}
             </button>
             <p style={{ font:"italic 600 12.5px var(--font-italic)", opacity:0.6, textAlign:"center", marginTop:8 }}>
-              {paymentLinkReady
-                ? "You'll be taken to Stripe's secure checkout , then brought right back."
-                : "(demo mode , no card charged)"}
+              You'll be taken to Stripe's secure checkout, then brought right back.
             </p>
           </div>
         </div>
-
         {/* ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ Right: order summary ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ÃƒÂ¢Ã¢â‚¬ÂÃ¢â€šÂ¬ */}
         <div className="co-card">
           <h3>Your order</h3>
