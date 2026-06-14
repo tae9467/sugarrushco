@@ -68,10 +68,19 @@ app.post("/webhook", express.raw({ type: "application/json" }), async (req, res)
 app.use(express.json());
 
 // ── Rate limiters ─────────────────────────────────────────────────────────────
-// Strict limit on admin routes: 30 requests per 10 minutes per IP
+// Very strict: 5 login attempts per 10 minutes per IP
+const loginLimiter = rateLimit({
+  windowMs: 10 * 60 * 1000,
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many login attempts — wait 10 minutes." }
+});
+
+// Authenticated admin usage: 120 requests per 10 minutes per IP
 const adminLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
-  max: 30,
+  max: 120,
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests — please wait a few minutes." }
@@ -86,6 +95,7 @@ const publicLimiter = rateLimit({
   message: { error: "Too many requests." }
 });
 
+app.use("/admin/verify", loginLimiter);
 app.use("/admin", adminLimiter);
 app.use("/orders", adminLimiter);
 app.use("/track",  adminLimiter);
@@ -99,6 +109,13 @@ function adminAuth(req, res, next) {
   }
   next();
 }
+
+// ── ADMIN: POST /admin/verify — verify password (rate-limited to 5/10min) ────
+app.post("/admin/verify", (req, res) => {
+  const token = req.headers["x-admin-secret"];
+  if (!token || token !== ADMIN_SECRET) return res.status(401).json({ error: "Wrong password." });
+  res.json({ ok: true });
+});
 
 // ── PUBLIC: GET /products ─────────────────────────────────────────────────────
 app.get("/products", async (req, res) => {

@@ -1254,9 +1254,10 @@ function ReviewsTab({ secret }) {
 }
 
 function AdminPage({ go }) {
-  const [authed,   setAuthed]   = usePState(false);
-  const [password, setPassword] = usePState("");
-  const [secret,   setSecret]   = usePState("");
+  const [authed,    setAuthed]    = usePState(false);
+  const [password,  setPassword]  = usePState("");
+  const [secret,    setSecret]    = usePState("");
+  const [failCount, setFailCount] = usePState(0);
   const [tab,      setTab]      = usePState("orders");
   const [orders,          setOrders]          = usePState([]);
   const [hiddenOrders,    setHiddenOrders]    = usePState([]);
@@ -1272,11 +1273,18 @@ function AdminPage({ go }) {
     if (!password.trim()) { setErr("Enter your password."); return; }
     setErr("");
     try {
-      const res = await fetch(SERVER_URL + "/orders", {
+      const res = await fetch(SERVER_URL + "/admin/verify", {
+        method: "POST",
         headers: { "x-admin-secret": password }
       });
-      if (res.status === 401) { setErr("Wrong password."); return; }
-      if (res.status === 429) { setErr("Too many attempts — wait a few minutes."); return; }
+      if (res.status === 429) { setAuthed("busted"); return; }
+      if (res.status === 401) {
+        const next = failCount + 1;
+        setFailCount(next);
+        if (next >= 5) { setAuthed("busted"); return; }
+        setErr(`Wrong password. ${5 - next} attempt${5 - next === 1 ? "" : "s"} left.`);
+        return;
+      }
       if (!res.ok) throw new Error("Server error");
       setSecret(password);
       setAuthed(true);
@@ -1386,6 +1394,28 @@ function AdminPage({ go }) {
     onSendTracking: sendTracking,
     ...extra
   });
+
+  if (authed === "busted") return (
+    <div style={{
+      minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center",
+      backgroundImage: "repeating-conic-gradient(#C9AAEB 0% 25%, #9B72D8 0% 50%)",
+      backgroundSize: "60px 60px"
+    }}>
+      <div style={{
+        background: "white", border: "4px solid #29261b", borderRadius: 20,
+        padding: "48px 40px", maxWidth: 420, textAlign: "center",
+        boxShadow: "8px 8px 0 #29261b"
+      }}>
+        <div style={{ fontSize: 64, marginBottom: 8 }}>🃏</div>
+        <h1 style={{ fontFamily: "var(--disp)", fontSize: 28, margin: "0 0 12px" }}>Nice try, babe.</h1>
+        <p style={{ fontSize: 15, lineHeight: 1.6, opacity: .75, margin: "0 0 24px" }}>
+          This is a private area. You've used up your attempts —
+          come back in 10 minutes or maybe just... don't.
+        </p>
+        <button className="btn" onClick={() => go("home")}>Take me back to the shop</button>
+      </div>
+    </div>
+  );
 
   if (!authed) return (
     <div className="confirm-wrap" data-screen-label="Admin login">
