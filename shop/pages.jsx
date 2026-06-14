@@ -884,7 +884,7 @@ function ProductsTab({ secret }) {
               Active Products ({visible.length})
             </h3>
             {loading && <p style={{ opacity:.6 }}>Loading…</p>}
-            {[...visible, ...hidden].map((p) => {
+            {visible.map((p) => {
               const isHidden = p.active === false;
               const isOos  = p.stock === 0;
               const isLow  = p.stock > 0 && p.stock <= 10;
