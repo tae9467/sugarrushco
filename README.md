@@ -2,7 +2,7 @@
 
 **Live shop: [sugarrushco.shop](https://sugarrushco.shop)**
 
-A full-stack e-commerce shop for handmade lip gloss, slime, body butter, and perfume, designed and built in 4 days. I paired my own design and coding skills with Claude and Claude Code to speed up the workflow, then iterated on and improved that foundation by hand: a custom storefront, secure checkout, and a complete admin dashboard for running the business day to day.
+A full-stack e-commerce shop for handmade lip gloss, slime, body butter, and perfume, designed and built in 4 days. I paired my own design and coding skills with Claude Design and Claude Code to speed up the workflow, then iterated on and improved that foundation by hand: a custom storefront, secure checkout, and a complete admin dashboard for running the business day to day.
 
 ## Features
 
@@ -35,7 +35,7 @@ A full-stack e-commerce shop for handmade lip gloss, slime, body butter, and per
 | Payments | Stripe Checkout with signature-verified webhooks |
 | Email | Resend |
 | Automation | GitHub Actions |
-| Design and workflow | Figma, Claude, Claude Code |
+| Design and workflow | Figma, Claude Design, Claude Code |
 
 ## Architecture
 
