@@ -41,8 +41,7 @@ app.use(cors({
     "https://www.sugarrushco.shop",
     "http://localhost:3000",
     "http://localhost:5500",
-    "http://127.0.0.1:5500",
-    /\.github\.io$/
+    "http://127.0.0.1:5500"
   ]
 }));
 
